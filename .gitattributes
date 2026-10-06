@@ -1,0 +1,45 @@
+# Normalize line endings: keep LF in the repository, convert on checkout.
+* text=auto eol=lf
+
+# --- Shell scripts must stay LF even on Windows (Git for Windows / CI) ---
+*.sh text eol=lf
+.githooks/* text eol=lf
+gradlew text eol=lf
+
+# --- Windows batch files must stay CRLF ---
+*.bat text eol=crlf
+gradlew.bat text eol=crlf
+
+# --- Gradle / Kotlin / JVM sources ---
+*.kt text eol=lf
+*.kts text eol=lf
+*.java text eol=lf
+*.gradle text eol=lf
+*.toml text eol=lf
+*.properties text eol=lf
+*.pro text eol=lf
+
+# --- Android resources ---
+*.xml text eol=lf
+*.webp binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webm binary
+*.mp4 binary
+*.9.png binary
+
+# --- Keystore / signing material must never be diffed or merged ---
+*.jks binary
+*.keystore binary
+*.p12 binary
+
+# Lockfiles / generated artifacts
+gradle-wrapper.jar binary
+*.apk binary
+*.aab binary
+
+# --- Ignore .gitignore-style files in diffs ---
+.gitignore text eol=lf
+.gitattributes text eol=lf

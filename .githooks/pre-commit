@@ -1,0 +1,47 @@
+#!/bin/sh
+#
+# pre-commit: block files that must never be committed and catch merge markers.
+#
+# Bypass with: git commit --no-verify
+
+staged=$(git diff --cached --name-only --diff-filter=ACMR)
+[ -z "$staged" ] && exit 0
+
+errors=""
+
+# Files that must never be tracked (secrets, machine-local, build output).
+forbidden='^(local\.properties|.*\.jks|.*\.keystore|.*\.p12|.*\.pem|.*\.key|google-services\.json|.*\.apk|.*\.aab|.*\.iml|.*\.ap_|.*\.dex|.*\.hprof|.*\.log)$'
+
+for file in $staged; do
+	# Convert Windows backslashes just in case.
+	norm=$(printf '%s' "$file" | tr '\\' '/')
+
+	if printf '%s\n' "$norm" | grep -qE '(^|/)(\.idea|\.gradle|\.kotlin|captures|\.cxx)(/|$)|(^|/)build(/|$)'; then
+		errors="$errors\n  build/IDE output staged: $norm"
+		continue
+	fi
+
+	if printf '%s\n' "$norm" | grep -qE "$forbidden"; then
+		errors="$errors\n  secret/local/build file staged: $norm"
+		continue
+	fi
+
+	# Conflict markers in text sources.
+	case "$norm" in
+	*.kt|*.kts|*.java|*.xml|*.gradle|*.toml|*.properties|*.md|*.json|*.pro|*.cfg|*.txt|*.yml|*.yaml)
+		if git show ":$norm" 2>/dev/null | grep -qE '^(<<<<<<< |=======$|>>>>>>> )'; then
+			errors="$errors\n  unresolved merge conflict in: $norm"
+		fi
+		;;
+	esac
+done
+
+if [ -n "$errors" ]; then
+	printf 'pre-commit blocked the commit:\n' >&2
+	printf "$errors\n" >&2
+	printf '\nFix the files above, unstage them with `git restore --staged <file>`,' >&2
+	printf 'or use `git commit --no-verify` if this is intentional.\n' >&2
+	exit 1
+fi
+
+exit 0

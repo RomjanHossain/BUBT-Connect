@@ -1,0 +1,83 @@
+#!/bin/sh
+#
+# Validate commit messages.
+#
+# Rules (Conventional Commits, tuned for this Android/Compose project):
+#   - subject line required, max 72 chars
+#   - subject must start with a known type: feat fix docs style refactor perf test build ci chore revert
+#   - optional scope in parentheses, e.g. feat(ui): ...
+#   - type/scope must be lowercase, subject must not start with an uppercase letter
+#   - no trailing period on the subject
+#   - blank line between subject and body when a body is present
+#   - merge commits, reverts and fixups bypass the rules
+#
+# Bypass once with: git commit --no-verify
+
+message_file="$1"
+message=$(cat "$message_file")
+
+fail() {
+	printf '%s\n' "$1" >&2
+	printf '\n' >&2
+	printf 'Commit message rejected. Format:\n' >&2
+	printf '  <type>(<optional scope>): <subject>\n' >&2
+	printf '\n' >&2
+	printf 'Types: feat fix docs style refactor perf test build ci chore revert\n' >&2
+	printf 'Example:\n' >&2
+	printf '  feat(login): add biometric unlock\n' >&2
+	exit 1
+}
+
+# Skip automated/system commits.
+first_line=$(printf '%s\n' "$message" | sed -n '1p')
+
+case "$first_line" in
+Merge\ *|Revert\ *|Reapply\ *) exit 0 ;;
+esac
+
+# fixup!/squash!/amend! targets reuse an existing valid message
+case "$first_line" in
+fixup!*|squash!*|amend!*|gitcommit!*) exit 0 ;;
+esac
+
+if [ -z "$(printf '%s' "$first_line" | tr -d '[:space:]')" ]; then
+	fail "Empty commit message."
+fi
+
+if printf '%s\n' "$first_line" | grep -qiE '^(wip|fixup|squash|tmp|asdf|test123)'; then
+	fail "Placeholder subject not allowed: '$first_line'"
+fi
+
+subject_length=$(printf '%s' "$first_line" | wc -m | tr -d ' ')
+if [ "$subject_length" -gt 72 ]; then
+	fail "Subject is $subject_length characters (max 72): '$first_line'"
+fi
+
+if ! printf '%s\n' "$first_line" | grep -qE '^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-z0-9._/-]+\))?!?: [a-z0-9]'; then
+	fail "Subject must match '<type>(<scope>): <subject>' starting lowercase: '$first_line'"
+fi
+
+if printf '%s' "$first_line" | grep -qE '\.$'; then
+	fail "Subject must not end with a period: '$first_line'"
+fi
+
+# Body must be separated from the subject by a blank line.
+rest=$(printf '%s\n' "$message" | sed -n '2,$p' | sed -e 's/[[:space:]]*$//')
+if [ -n "$rest" ]; then
+	if ! printf '%s\n' "$rest" | sed -n '1p' | grep -q '^[[:space:]]*$'; then
+		fail "Add a blank line between the subject and the body."
+	fi
+fi
+
+# Lines must not exceed 100 chars (subject rule already covers line 1).
+long_lines=$(printf '%s\n' "$message" | awk 'length > 100 { count++ } END { print count + 0 }')
+if [ "$long_lines" -gt 0 ]; then
+	printf 'warning: %s line(s) exceed 100 characters\n' "$long_lines" >&2
+fi
+
+# Comments must not be left in the message body (git strips them, this catches leftovers).
+if printf '%s\n' "$message" | grep -qE '^#[^#!]'; then
+	fail "Remove commented-out lines from the commit message."
+fi
+
+exit 0

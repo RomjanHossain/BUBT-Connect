@@ -1,0 +1,16 @@
+# <type>(<scope>): <short imperative summary>
+#
+# Types: feat fix docs style refactor perf test build ci chore revert
+# Scopes (suggested): ui, theme, auth, data, network, gradle, ci
+#
+# Rules:
+#   - subject <= 72 chars, lowercase, no trailing period
+#   - explain WHY in the body, not WHAT (the diff shows WHAT)
+#   - wrap body lines at 100 chars
+#   - one logical change per commit
+#
+# Delete these comment lines before committing (git strips them automatically).
+
+# Why:
+#
+# Notes:

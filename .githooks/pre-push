@@ -1,0 +1,45 @@
+#!/bin/sh
+#
+# pre-push: run a fast Gradle verification before pushing to a remote branch.
+#
+# Set hooks.gitleaksPush / hooks.verifyPush = false to skip (also: --no-verify).
+# The Android SDK location is read from local.properties when present.
+
+remote="$1"
+branch="$(git symbolic-ref --quiet --short HEAD 2>/dev/null || git rev-parse --short HEAD)"
+
+if [ "$(git config --get hooks.verifyPush)" = "false" ]; then
+	exit 0
+fi
+
+# Android/Compose heavy verification only makes sense for app code changes.
+changed=$(git diff --name-only "origin/$branch...HEAD" 2>/dev/null)
+if [ -z "$changed" ]; then
+	changed=$(git diff --name-only HEAD~1 2>/dev/null)
+fi
+
+if ! printf '%s\n' "$changed" | grep -qE '^(app/src/|build\.gradle\.kts$|settings\.gradle\.kts$|gradle/)'; then
+	exit 0
+fi
+
+if [ ! -f ./gradlew ]; then
+	exit 0
+fi
+
+printf 'pre-push: running Gradle verification (assembleDebug + unit tests)...\n' >&2
+
+if [ -x ./gradlew ]; then
+	./gradlew --quiet assembleDebug testDebugUnitTest
+else
+	sh ./gradlew --quiet assembleDebug testDebugUnitTest
+fi
+
+status=$?
+
+if [ $status -ne 0 ]; then
+	printf '\npre-push: Gradle verification failed.\n' >&2
+	printf 'Fix the build, or push with `git push --no-verify` if intentional.\n' >&2
+	exit $status
+fi
+
+exit 0
