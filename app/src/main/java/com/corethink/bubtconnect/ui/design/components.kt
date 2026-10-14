@@ -2,6 +2,7 @@ package com.corethink.bubtconnect.ui.design
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
@@ -647,3 +648,30 @@ fun SkeletonCard(modifier: Modifier = Modifier) {
     }
 }
 
+
+// ============================================================ pager indicator
+/** Pager dots — the active page stretches into a pill. */
+@Composable
+fun BubtPagerIndicator(
+    count: Int,
+    selected: Int,
+    modifier: Modifier = Modifier
+) {
+    Row(modifier = modifier, horizontalArrangement = Arrangement.spacedBy(BubtSpacing.Sm)) {
+        repeat(count) { index ->
+            val active = index == selected
+            val width by animateDpAsState(if (active) 20.dp else 8.dp, label = "dotWidth")
+            val color by animateColorAsState(
+                if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHighest,
+                label = "dotColor"
+            )
+            Box(
+                modifier = Modifier
+                    .width(width)
+                    .height(8.dp)
+                    .clip(CircleShape)
+                    .background(color)
+            )
+        }
+    }
+}

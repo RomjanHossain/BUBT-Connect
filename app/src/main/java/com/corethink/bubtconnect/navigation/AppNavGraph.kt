@@ -1,12 +1,17 @@
 package com.corethink.bubtconnect.navigation
 
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.corethink.bubtconnect.ui.auth.AnnexLoginRoute
-import com.corethink.bubtconnect.ui.home.HomeScreen
+import com.corethink.bubtconnect.ui.design.BubtSpacing
+import com.corethink.bubtconnect.ui.onboarding.OnboardingTopBar
 import com.corethink.bubtconnect.ui.onboarding.ProfileSetupRoute
 import com.corethink.bubtconnect.ui.onboarding.WelcomeScreen
 import com.corethink.bubtconnect.ui.profile.GuestProfileRoute
@@ -16,7 +21,8 @@ object Routes {
     const val PROFILE_SETUP = "profile_setup" // 1c
     const val GUEST_PROFILE = "guest_profile" // 1d
     const val ANNEX_LOGIN = "annex_login"     // 1e
-    const val HOME = "home"
+    const val HOME = "home"                   // 1f, inside MainScaffold
+    const val NOTIFICATIONS = "notifications"
 }
 
 @Composable
@@ -49,15 +55,24 @@ fun AppNavGraph(navController: NavHostController = rememberNavController()) {
             )
         }
         composable(Routes.HOME) {
-            HomeScreen()
+            MainScaffold(
+                onNotifications = { navController.navigate(Routes.NOTIFICATIONS) },
+                onConnectAnnex = { navController.navigate(Routes.ANNEX_LOGIN) }
+            )
+        }
+        composable(Routes.NOTIFICATIONS) {
+            Column(modifier = Modifier.statusBarsPadding().padding(horizontal = BubtSpacing.Screen)) {
+                OnboardingTopBar(title = "Notifications", onBack = { navController.popBackStack() })
+                ComingSoon(title = "No notifications yet")
+            }
         }
     }
 }
 
-/** Home replaces onboarding entirely so Back exits the app instead of returning to it. */
+/** Home replaces everything behind it so Back exits the app instead of returning to onboarding. */
 private fun NavHostController.navigateToHome() {
     navigate(Routes.HOME) {
-        popUpTo(Routes.WELCOME) { inclusive = true }
+        popUpTo(graph.id) { inclusive = true }
         launchSingleTop = true
     }
 }

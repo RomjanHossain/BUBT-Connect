@@ -1,7 +1,5 @@
 package com.corethink.bubtconnect.ui.onboarding
 
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -9,7 +7,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -18,7 +15,6 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
@@ -30,7 +26,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -45,6 +40,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.corethink.bubtconnect.R
 import com.corethink.bubtconnect.ui.design.BUBTConnectMaterial3Theme
+import com.corethink.bubtconnect.ui.design.BubtPagerIndicator
 import com.corethink.bubtconnect.ui.design.BubtPrimaryButton
 import com.corethink.bubtconnect.ui.design.BubtSpacing
 import com.corethink.bubtconnect.ui.design.BubtTextButton
@@ -87,7 +83,7 @@ fun WelcomeScreen(
                 WelcomeSlideContent(slides[page])
             }
 
-            PagerDots(count = slides.size, selected = pagerState.currentPage)
+            BubtPagerIndicator(count = slides.size, selected = pagerState.currentPage)
             Spacer(modifier = Modifier.height(BubtSpacing.Xl))
 
             BubtPrimaryButton(
@@ -162,27 +158,6 @@ fun BubtLogo(size: Dp, modifier: Modifier = Modifier) {
                 .size(size)
                 .graphicsLayer { scaleX = 1.45f; scaleY = 1.45f }
         )
-    }
-}
-
-@Composable
-private fun PagerDots(count: Int, selected: Int) {
-    Row(horizontalArrangement = Arrangement.spacedBy(BubtSpacing.Sm)) {
-        repeat(count) { index ->
-            val active = index == selected
-            val width by animateDpAsState(if (active) 20.dp else 8.dp, label = "dotWidth")
-            val color by animateColorAsState(
-                if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHighest,
-                label = "dotColor"
-            )
-            Box(
-                modifier = Modifier
-                    .width(width)
-                    .height(8.dp)
-                    .clip(CircleShape)
-                    .background(color)
-            )
-        }
     }
 }
 
