@@ -282,7 +282,8 @@ fun BubtTextField(
     readOnly: Boolean = false,
     stateOverride: BubtFieldState? = null,
     keyboardType: KeyboardType = KeyboardType.Text,
-    visualTransformation: VisualTransformation = VisualTransformation.None
+    visualTransformation: VisualTransformation = VisualTransformation.None,
+    trailingIcon: (@Composable () -> Unit)? = null
 ) {
     var isFocused by remember { mutableStateOf(false) }
     val interactionSource = remember { MutableInteractionSource() }
@@ -308,6 +309,7 @@ fun BubtTextField(
         shape = BubtShapes.Field,
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
         visualTransformation = visualTransformation,
+        trailingIcon = trailingIcon,
         interactionSource = interactionSource,
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = MaterialTheme.colorScheme.primary,

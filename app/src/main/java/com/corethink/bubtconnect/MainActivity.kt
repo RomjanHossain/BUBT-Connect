@@ -17,6 +17,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.corethink.bubtconnect.navigation.AppNavGraph
 import com.corethink.bubtconnect.ui.design.BUBTConnectMaterial3Theme
 import com.corethink.bubtconnect.ui.design.DesignSystemShowcase
 
@@ -26,7 +27,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             BUBTConnectMaterial3Theme {
-                DesignSystemShowcase()
+                AppNavGraph()
             }
         }
     }
@@ -36,6 +37,6 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun DesignSystemPreview() {
     BUBTConnectMaterial3Theme {
-        DesignSystemShowcase()
+        AppNavGraph()
     }
 }
