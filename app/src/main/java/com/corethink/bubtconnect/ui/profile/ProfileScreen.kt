@@ -21,6 +21,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.outlined.Sync
+import androidx.compose.material.icons.outlined.Payments
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -28,17 +30,12 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -57,6 +54,8 @@ import com.corethink.bubtconnect.data.model.StudentProfile
 import com.corethink.bubtconnect.data.model.ThemeMode
 import com.corethink.bubtconnect.ui.auth.AnnexLoginUiState
 import com.corethink.bubtconnect.ui.auth.AnnexLoginViewModel
+import com.corethink.bubtconnect.ui.components.BubtSegmentedControl
+import com.corethink.bubtconnect.ui.components.rememberSyncedLabel
 import com.corethink.bubtconnect.ui.design.BUBTConnectMaterial3Theme
 import com.corethink.bubtconnect.ui.design.BubtChip
 import com.corethink.bubtconnect.ui.design.BubtOutlinedButton
@@ -65,12 +64,12 @@ import com.corethink.bubtconnect.ui.design.BubtSpacing
 import com.corethink.bubtconnect.ui.design.BubtSuccess
 import com.corethink.bubtconnect.ui.design.BubtTextButton
 import com.corethink.bubtconnect.ui.design.bubtErrorText
-import kotlinx.coroutines.delay
 
 @Composable
 fun ProfileRoute(
     onEditProfile: () -> Unit,
     onLoggedOut: () -> Unit,
+    onOpenFees: () -> Unit,
     viewModel: ProfileViewModel = viewModel(),
     annexViewModel: AnnexLoginViewModel = viewModel()
 ) {
@@ -80,6 +79,7 @@ fun ProfileRoute(
         state = state,
         annexState = annexState,
         onEditProfile = onEditProfile,
+        onOpenFees = onOpenFees,
         onSync = viewModel::sync,
         onAnnexIdChange = annexViewModel::onStudentIdChange,
         onPasswordChange = annexViewModel::onPasswordChange,
@@ -110,7 +110,8 @@ fun ProfileScreen(
     onPaymentDeadlinesChange: (Boolean) -> Unit,
     onThemeModeChange: (ThemeMode) -> Unit,
     onLogout: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onOpenFees: () -> Unit = {}
 ) {
     var confirmLogout by rememberSaveable { mutableStateOf(false) }
 
@@ -143,6 +144,8 @@ fun ProfileScreen(
                 isSyncing = state.isSyncing,
                 onSync = onSync
             )
+            Spacer(modifier = Modifier.height(BubtSpacing.Md))
+            FeesEntry(onClick = onOpenFees)
         } else {
             ConnectAnnexCard(
                 state = annexState,
@@ -252,7 +255,7 @@ private fun AnnexStatusCard(lastSyncedAt: Long?, isSyncing: Boolean, onSync: () 
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = if (isSyncing) "Syncing…" else syncedLabel(lastSyncedAt),
+                    text = if (isSyncing) "Syncing…" else rememberSyncedLabel(lastSyncedAt),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -282,23 +285,37 @@ private fun AnnexStatusCard(lastSyncedAt: Long?, isSyncing: Boolean, onSync: () 
     }
 }
 
-/** "Synced 5 min ago", refreshed every 30 seconds while on screen. */
 @Composable
-private fun syncedLabel(lastSyncedAt: Long?): String {
-    var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
-    LaunchedEffect(lastSyncedAt) {
-        while (true) {
-            now = System.currentTimeMillis()
-            delay(30_000)
+private fun FeesEntry(onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = BubtShapes.Card,
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+    ) {
+        Row(
+            modifier = Modifier.padding(BubtSpacing.CardPadding),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Payments,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary
+            )
+            Spacer(modifier = Modifier.width(BubtSpacing.Md))
+            Text(
+                text = "Fees & Waivers",
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.weight(1f)
+            )
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
-    }
-    if (lastSyncedAt == null) return "Not synced yet"
-    val minutes = ((now - lastSyncedAt) / 60_000).coerceAtLeast(0)
-    return when {
-        minutes < 1 -> "Synced just now"
-        minutes < 60 -> "Synced $minutes min ago"
-        minutes < 24 * 60 -> "Synced ${minutes / 60} h ago"
-        else -> "Synced ${minutes / (24 * 60)} d ago"
     }
 }
 
@@ -379,27 +396,12 @@ private fun reminderLabel(minutes: Int): String = if (minutes == 0) "Off" else "
 
 @Composable
 private fun ThemeModeSelector(selected: ThemeMode, onSelect: (ThemeMode) -> Unit) {
-    val modes = ThemeMode.entries
-    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-        modes.forEachIndexed { index, mode ->
-            SegmentedButton(
-                selected = mode == selected,
-                onClick = { onSelect(mode) },
-                shape = SegmentedButtonDefaults.itemShape(index = index, count = modes.size),
-                colors = SegmentedButtonDefaults.colors(
-                    activeContainerColor = MaterialTheme.colorScheme.primary,
-                    activeContentColor = MaterialTheme.colorScheme.onPrimary,
-                    activeBorderColor = MaterialTheme.colorScheme.primary,
-                    inactiveContainerColor = MaterialTheme.colorScheme.surface,
-                    inactiveContentColor = MaterialTheme.colorScheme.onSurface,
-                    inactiveBorderColor = MaterialTheme.colorScheme.outline
-                ),
-                icon = {}
-            ) {
-                Text(mode.label, style = MaterialTheme.typography.labelLarge)
-            }
-        }
-    }
+    BubtSegmentedControl(
+        options = ThemeMode.entries,
+        selected = selected,
+        label = ThemeMode::label,
+        onSelect = onSelect
+    )
 }
 
 @Composable

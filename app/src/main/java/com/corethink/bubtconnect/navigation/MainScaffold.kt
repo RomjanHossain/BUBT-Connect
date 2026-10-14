@@ -24,6 +24,12 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import com.corethink.bubtconnect.data.model.DashboardHighlight
+import com.corethink.bubtconnect.ui.academics.AcademicsScreen
+import com.corethink.bubtconnect.ui.academics.AcademicsTab
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -59,8 +65,10 @@ fun MainScaffold(
     onConnectAnnex: () -> Unit,
     onEditProfile: () -> Unit,
     onLoggedOut: () -> Unit,
+    onOpenFees: () -> Unit,
     tabNavController: NavHostController = rememberNavController()
 ) {
+    var academicsTab by rememberSaveable { mutableStateOf(AcademicsTab.Routine) }
     val backStackEntry by tabNavController.currentBackStackEntryAsState()
     val currentDestination = backStackEntry?.destination
 
@@ -70,6 +78,11 @@ fun MainScaffold(
             launchSingleTop = true
             restoreState = true
         }
+    }
+
+    fun openAcademics(tab: AcademicsTab) {
+        academicsTab = tab
+        selectTab(MainTab.Academics)
     }
 
     Scaffold(
@@ -108,23 +121,37 @@ fun MainScaffold(
             composable(MainTab.Home.route) {
                 HomeRoute(
                     onNotifications = onNotifications,
-                    onCourseClick = { selectTab(MainTab.Academics) },
+                    onCourseClick = { openAcademics(AcademicsTab.Courses) },
                     onQuickAction = { action ->
                         when (action) {
                             QuickAction.ScanDocument -> selectTab(MainTab.Scan)
-                            QuickAction.ViewRoutine,
-                            QuickAction.CheckResult,
-                            QuickAction.AcademicCalendar -> selectTab(MainTab.Academics)
+                            QuickAction.ViewRoutine -> openAcademics(AcademicsTab.Routine)
+                            QuickAction.CheckResult -> openAcademics(AcademicsTab.Results)
+                            QuickAction.AcademicCalendar -> openAcademics(AcademicsTab.Calendar)
+                        }
+                    },
+                    onHighlightClick = { highlight ->
+                        when (highlight) {
+                            is DashboardHighlight.NextClass -> openAcademics(AcademicsTab.Routine)
+                            is DashboardHighlight.ExamAlert -> openAcademics(AcademicsTab.Exams)
+                            is DashboardHighlight.PaymentDue -> onOpenFees()
                         }
                     },
                     onConnectAnnex = onConnectAnnex
                 )
             }
-            composable(MainTab.Academics.route) { ComingSoon(MainTab.Academics.label) }
+            composable(MainTab.Academics.route) {
+                AcademicsScreen(
+                    selectedTab = academicsTab,
+                    onSelectTab = { academicsTab = it },
+                    onConnectAnnex = onConnectAnnex,
+                    onOpenFees = onOpenFees
+                )
+            }
             composable(MainTab.Scan.route) { ComingSoon(MainTab.Scan.label) }
             composable(MainTab.Community.route) { ComingSoon(MainTab.Community.label) }
             composable(MainTab.Profile.route) {
-                ProfileRoute(onEditProfile = onEditProfile, onLoggedOut = onLoggedOut)
+                ProfileRoute(onEditProfile = onEditProfile, onLoggedOut = onLoggedOut, onOpenFees = onOpenFees)
             }
         }
     }

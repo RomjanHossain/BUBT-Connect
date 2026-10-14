@@ -73,6 +73,7 @@ fun HomeRoute(
     onNotifications: () -> Unit,
     onCourseClick: (Course) -> Unit,
     onQuickAction: (QuickAction) -> Unit,
+    onHighlightClick: (DashboardHighlight) -> Unit,
     onConnectAnnex: () -> Unit,
     viewModel: HomeViewModel = viewModel()
 ) {
@@ -81,6 +82,7 @@ fun HomeRoute(
         state = state,
         onNotifications = onNotifications,
         onCourseClick = onCourseClick,
+        onHighlightClick = onHighlightClick,
         // Guest mode: locked actions open Annex login (1e) instead.
         onQuickAction = { action ->
             if (action.needsAnnex && state.isGuest) onConnectAnnex() else onQuickAction(action)
@@ -95,7 +97,8 @@ fun HomeScreen(
     onNotifications: () -> Unit,
     onCourseClick: (Course) -> Unit,
     onQuickAction: (QuickAction) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onHighlightClick: (DashboardHighlight) -> Unit = {}
 ) {
     Column(
         modifier = modifier
@@ -123,7 +126,7 @@ fun HomeScreen(
         Spacer(modifier = Modifier.height(BubtSpacing.Lg))
 
         if (state.highlights.isNotEmpty()) {
-            HighlightsCarousel(highlights = state.highlights)
+            HighlightsCarousel(highlights = state.highlights, onClick = onHighlightClick)
             Spacer(modifier = Modifier.height(BubtSpacing.Xl))
         }
 
@@ -202,7 +205,7 @@ private fun SectionTitle(text: String) {
 
 // ------------------------------------------------------------- highlights
 @Composable
-private fun HighlightsCarousel(highlights: List<DashboardHighlight>) {
+private fun HighlightsCarousel(highlights: List<DashboardHighlight>, onClick: (DashboardHighlight) -> Unit) {
     val pagerState = rememberPagerState { highlights.size }
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         HorizontalPager(
@@ -211,7 +214,7 @@ private fun HighlightsCarousel(highlights: List<DashboardHighlight>) {
             pageSpacing = BubtSpacing.Md,
             modifier = Modifier.fillMaxWidth()
         ) { page ->
-            HighlightCard(highlights[page])
+            HighlightCard(highlights[page], onClick = { onClick(highlights[page]) })
         }
         Spacer(modifier = Modifier.height(BubtSpacing.Md))
         BubtPagerIndicator(count = highlights.size, selected = pagerState.currentPage)
@@ -219,12 +222,13 @@ private fun HighlightsCarousel(highlights: List<DashboardHighlight>) {
 }
 
 @Composable
-private fun HighlightCard(highlight: DashboardHighlight) {
+private fun HighlightCard(highlight: DashboardHighlight, onClick: () -> Unit) {
     val colors = MaterialTheme.colorScheme
     when (highlight) {
         is DashboardHighlight.NextClass -> {
             val minutesUntil = remember(highlight) { minutesUntil(highlight.startMinuteOfDay) }
             HighlightSurface(
+                onClick = onClick,
                 container = colors.primaryContainer,
                 content = colors.onPrimaryContainer,
                 eyebrow = "Next class · in ${formatDuration(minutesUntil)}",
@@ -236,6 +240,7 @@ private fun HighlightCard(highlight: DashboardHighlight) {
             )
         }
         is DashboardHighlight.ExamAlert -> HighlightSurface(
+            onClick = onClick,
             container = colors.tertiaryContainer,
             content = colors.onTertiaryContainer,
             eyebrow = "Exam alert · ${highlight.examName}",
@@ -246,6 +251,7 @@ private fun HighlightCard(highlight: DashboardHighlight) {
             )
         )
         is DashboardHighlight.PaymentDue -> HighlightSurface(
+            onClick = onClick,
             container = colors.errorContainer,
             content = colors.onErrorContainer,
             eyebrow = "Payment due · ${highlight.dueDate}",
@@ -259,6 +265,7 @@ private fun HighlightCard(highlight: DashboardHighlight) {
 
 @Composable
 private fun HighlightSurface(
+    onClick: () -> Unit,
     container: Color,
     content: Color,
     eyebrow: String,
@@ -266,6 +273,7 @@ private fun HighlightSurface(
     lines: List<Pair<ImageVector, String>>
 ) {
     Surface(
+        onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = 140.dp),

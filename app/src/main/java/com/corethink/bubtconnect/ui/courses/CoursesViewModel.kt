@@ -1,0 +1,89 @@
+package com.corethink.bubtconnect.ui.courses
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.corethink.bubtconnect.data.model.CourseStatus
+import com.corethink.bubtconnect.data.model.CurriculumCourse
+import com.corethink.bubtconnect.data.repository.AcademicsRepository
+import com.corethink.bubtconnect.data.repository.ProfileRepository
+import com.corethink.bubtconnect.data.repository.SampleAcademicsRepository
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
+
+enum class CourseFilter(val label: String) { All("All"), Completed("Completed"), Remaining("Remaining") }
+
+data class CoursesUiState(
+    val query: String = "",
+    val filter: CourseFilter = CourseFilter.All,
+    val isConnected: Boolean = false,
+    val department: String = "CSE",
+    val courses: List<CurriculumCourse> = emptyList(),
+    val completedCount: Int = 0,
+    val totalCount: Int = 0
+)
+
+class CoursesViewModel(
+    repository: AcademicsRepository = SampleAcademicsRepository,
+    profileRepository: ProfileRepository = ProfileRepository.Default
+) : ViewModel() {
+
+    private val curriculum = repository.curriculum()
+    private val query = MutableStateFlow("")
+    private val filter = MutableStateFlow(CourseFilter.All)
+
+    val uiState: StateFlow<CoursesUiState> = combine(
+        query,
+        filter,
+        profileRepository.annexConnected,
+        profileRepository.profile
+    ) { query, filter, connected, profile ->
+        // Completion is only known once Annex is connected, so guests always see the full list.
+        val effectiveFilter = if (connected) filter else CourseFilter.All
+        CoursesUiState(
+            query = query,
+            filter = effectiveFilter,
+            isConnected = connected,
+            department = profile?.department ?: "CSE",
+            courses = filterCourses(curriculum, query, effectiveFilter),
+            completedCount = curriculum.count { it.status == CourseStatus.Completed },
+            totalCount = curriculum.size
+        )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5_000),
+        initialValue = CoursesUiState(courses = curriculum, totalCount = curriculum.size)
+    )
+
+    fun onQueryChange(value: String) {
+        query.value = value
+    }
+
+    fun selectFilter(value: CourseFilter) {
+        filter.value = value
+    }
+
+    companion object {
+        fun filterCourses(
+            courses: List<CurriculumCourse>,
+            query: String,
+            filter: CourseFilter
+        ): List<CurriculumCourse> {
+            val needle = query.trim()
+            return courses.filter { item ->
+                val matchesQuery = needle.isEmpty() ||
+                    item.course.code.contains(needle, ignoreCase = true) ||
+                    item.course.code.replace(" ", "").contains(needle.replace(" ", ""), ignoreCase = true) ||
+                    item.course.title.contains(needle, ignoreCase = true)
+                val matchesFilter = when (filter) {
+                    CourseFilter.All -> true
+                    CourseFilter.Completed -> item.status == CourseStatus.Completed
+                    CourseFilter.Remaining -> item.status != CourseStatus.Completed
+                }
+                matchesQuery && matchesFilter
+            }
+        }
+    }
+}

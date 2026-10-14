@@ -11,6 +11,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.corethink.bubtconnect.ui.auth.AnnexLoginRoute
 import com.corethink.bubtconnect.ui.design.BubtSpacing
+import com.corethink.bubtconnect.ui.fees.FeesRoute
 import com.corethink.bubtconnect.ui.onboarding.OnboardingTopBar
 import com.corethink.bubtconnect.ui.onboarding.ProfileSetupRoute
 import com.corethink.bubtconnect.ui.onboarding.WelcomeScreen
@@ -24,6 +25,7 @@ object Routes {
     const val HOME = "home"                   // 1f, inside MainScaffold
     const val NOTIFICATIONS = "notifications"
     const val EDIT_PROFILE = "edit_profile"   // 1c in edit mode, from Profile (1s)
+    const val FEES = "fees"                   // 1t
 }
 
 @Composable
@@ -60,11 +62,18 @@ fun AppNavGraph(navController: NavHostController = rememberNavController()) {
                 onNotifications = { navController.navigate(Routes.NOTIFICATIONS) },
                 onConnectAnnex = { navController.navigate(Routes.ANNEX_LOGIN) },
                 onEditProfile = { navController.navigate(Routes.EDIT_PROFILE) },
+                onOpenFees = { navController.navigate(Routes.FEES) },
                 onLoggedOut = {
                     navController.navigate(Routes.WELCOME) {
                         popUpTo(navController.graph.id) { inclusive = true }
                     }
                 }
+            )
+        }
+        composable(Routes.FEES) {
+            FeesRoute(
+                onBack = { navController.popBackStack() },
+                onConnectAnnex = { navController.navigate(Routes.ANNEX_LOGIN) }
             )
         }
         composable(Routes.EDIT_PROFILE) {
