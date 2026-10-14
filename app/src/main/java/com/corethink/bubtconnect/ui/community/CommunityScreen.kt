@@ -289,7 +289,7 @@ private fun LikeButton(liked: Boolean, count: Int, onClick: () -> Unit) {
 @Preview(showBackground = true, heightDp = 800)
 @Composable
 private fun CommunityScreenPreview() {
-    val posts = SampleCommunityRepository.posts()
+    val posts = SampleCommunityRepository.posts.value
     val liked = posts.filter { it.likedByMe }.map { it.id }.toSet()
     BUBTConnectMaterial3Theme {
         Surface(color = MaterialTheme.colorScheme.background) {

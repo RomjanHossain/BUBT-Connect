@@ -36,12 +36,16 @@ class CommunityViewModel(
     repository: CommunityRepository = SampleCommunityRepository
 ) : ViewModel() {
 
-    private val posts = repository.posts()
     private val query = MutableStateFlow("")
     private val filter = MutableStateFlow(CommunityFilter.All)
-    private val likedIds = MutableStateFlow(posts.filter { it.likedByMe }.map { it.id }.toSet())
+    private val likedIds = MutableStateFlow(repository.posts.value.filter { it.likedByMe }.map { it.id }.toSet())
 
-    val uiState: StateFlow<CommunityUiState> = combine(query, filter, likedIds) { query, filter, liked ->
+    val uiState: StateFlow<CommunityUiState> = combine(
+        repository.posts,
+        query,
+        filter,
+        likedIds
+    ) { posts, query, filter, liked ->
         CommunityUiState(
             query = query,
             filter = filter,
@@ -50,7 +54,7 @@ class CommunityViewModel(
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
-        initialValue = CommunityUiState(posts = posts.map { it.toItem(likedIds.value) })
+        initialValue = CommunityUiState(posts = repository.posts.value.map { it.toItem(likedIds.value) })
     )
 
     fun onQueryChange(value: String) {

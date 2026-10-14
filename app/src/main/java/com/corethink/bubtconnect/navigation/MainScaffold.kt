@@ -67,6 +67,7 @@ fun MainScaffold(
     onEditProfile: () -> Unit,
     onLoggedOut: () -> Unit,
     onOpenFees: () -> Unit,
+    onOpenScanner: () -> Unit,
     tabNavController: NavHostController = rememberNavController()
 ) {
     var academicsTab by rememberSaveable { mutableStateOf(AcademicsTab.Routine) }
@@ -74,6 +75,8 @@ fun MainScaffold(
     val currentDestination = backStackEntry?.destination
 
     fun selectTab(tab: MainTab) {
+        // Scan is a full-screen wizard (no bottom nav), not a tab destination.
+        if (tab == MainTab.Scan) return onOpenScanner()
         tabNavController.navigate(tab.route) {
             popUpTo(tabNavController.graph.findStartDestination().id) { saveState = true }
             launchSingleTop = true
@@ -149,7 +152,6 @@ fun MainScaffold(
                     onOpenFees = onOpenFees
                 )
             }
-            composable(MainTab.Scan.route) { ComingSoon(MainTab.Scan.label) }
             composable(MainTab.Community.route) { CommunityRoute() }
             composable(MainTab.Profile.route) {
                 ProfileRoute(onEditProfile = onEditProfile, onLoggedOut = onLoggedOut, onOpenFees = onOpenFees)

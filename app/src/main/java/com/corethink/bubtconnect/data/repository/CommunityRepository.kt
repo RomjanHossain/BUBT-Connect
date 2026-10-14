@@ -2,14 +2,27 @@ package com.corethink.bubtconnect.data.repository
 
 import com.corethink.bubtconnect.data.model.CommunityPost
 import com.corethink.bubtconnect.data.model.PostCategory
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 
 interface CommunityRepository {
-    fun posts(): List<CommunityPost>
+    val posts: StateFlow<List<CommunityPost>>
+    fun publish(post: CommunityPost)
 }
 
-/** Sample feed until uploads and likes are backed by data/source/remote. */
+/** In-memory sample feed until uploads and likes are backed by data/source/remote. */
 object SampleCommunityRepository : CommunityRepository {
-    override fun posts(): List<CommunityPost> = listOf(
+    private val _posts = MutableStateFlow(samplePosts())
+    override val posts: StateFlow<List<CommunityPost>> = _posts.asStateFlow()
+
+    /** Newest first, so a fresh upload tops the feed. */
+    override fun publish(post: CommunityPost) {
+        _posts.update { listOf(post) + it }
+    }
+
+    private fun samplePosts(): List<CommunityPost> = listOf(
         CommunityPost(
             id = "p1",
             title = "DS Lab Report: Linked Lists",

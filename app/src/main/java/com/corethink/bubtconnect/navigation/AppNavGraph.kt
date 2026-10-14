@@ -16,6 +16,7 @@ import com.corethink.bubtconnect.ui.onboarding.OnboardingTopBar
 import com.corethink.bubtconnect.ui.onboarding.ProfileSetupRoute
 import com.corethink.bubtconnect.ui.onboarding.WelcomeScreen
 import com.corethink.bubtconnect.ui.profile.GuestProfileRoute
+import com.corethink.bubtconnect.ui.scanner.ScannerRoute
 
 object Routes {
     const val WELCOME = "welcome"            // 1b
@@ -26,6 +27,7 @@ object Routes {
     const val NOTIFICATIONS = "notifications"
     const val EDIT_PROFILE = "edit_profile"   // 1c in edit mode, from Profile (1s)
     const val FEES = "fees"                   // 1t
+    const val SCANNER = "scanner"             // 1m–1q, full-screen wizard
 }
 
 @Composable
@@ -63,6 +65,7 @@ fun AppNavGraph(navController: NavHostController = rememberNavController()) {
                 onConnectAnnex = { navController.navigate(Routes.ANNEX_LOGIN) },
                 onEditProfile = { navController.navigate(Routes.EDIT_PROFILE) },
                 onOpenFees = { navController.navigate(Routes.FEES) },
+                onOpenScanner = { navController.navigate(Routes.SCANNER) },
                 onLoggedOut = {
                     navController.navigate(Routes.WELCOME) {
                         popUpTo(navController.graph.id) { inclusive = true }
@@ -75,6 +78,9 @@ fun AppNavGraph(navController: NavHostController = rememberNavController()) {
                 onBack = { navController.popBackStack() },
                 onConnectAnnex = { navController.navigate(Routes.ANNEX_LOGIN) }
             )
+        }
+        composable(Routes.SCANNER) {
+            ScannerRoute(onClose = { navController.popBackStack() })
         }
         composable(Routes.EDIT_PROFILE) {
             ProfileSetupRoute(
