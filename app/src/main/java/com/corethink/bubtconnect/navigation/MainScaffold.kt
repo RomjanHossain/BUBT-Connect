@@ -30,6 +30,7 @@ import androidx.compose.runtime.setValue
 import com.corethink.bubtconnect.data.model.DashboardHighlight
 import com.corethink.bubtconnect.ui.academics.AcademicsScreen
 import com.corethink.bubtconnect.ui.academics.AcademicsTab
+import com.corethink.bubtconnect.ui.community.CommunityRoute
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -149,7 +150,7 @@ fun MainScaffold(
                 )
             }
             composable(MainTab.Scan.route) { ComingSoon(MainTab.Scan.label) }
-            composable(MainTab.Community.route) { ComingSoon(MainTab.Community.label) }
+            composable(MainTab.Community.route) { CommunityRoute() }
             composable(MainTab.Profile.route) {
                 ProfileRoute(onEditProfile = onEditProfile, onLoggedOut = onLoggedOut, onOpenFees = onOpenFees)
             }
