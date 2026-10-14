@@ -36,6 +36,7 @@ fun ProfileSetupRoute(
     onBack: () -> Unit,
     onContinue: () -> Unit,
     onSkip: () -> Unit,
+    isEditing: Boolean = false,
     viewModel: ProfileSetupViewModel = viewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -47,11 +48,12 @@ fun ProfileSetupRoute(
         onSemesterChange = viewModel::onSemesterChange,
         onNameChange = viewModel::onNameChange,
         onContinue = { if (viewModel.save()) onContinue() },
-        onSkip = onSkip
+        onSkip = onSkip,
+        isEditing = isEditing
     )
 }
 
-/** 1c · Basic profile setup — step 1 of 2, no login needed. */
+/** 1c · Basic profile setup — step 1 of 2, no login needed. [isEditing] reuses it from Profile (1s). */
 @Composable
 fun ProfileSetupScreen(
     state: ProfileSetupUiState,
@@ -61,7 +63,8 @@ fun ProfileSetupScreen(
     onSemesterChange: (String) -> Unit,
     onNameChange: (String) -> Unit,
     onContinue: () -> Unit,
-    onSkip: () -> Unit
+    onSkip: () -> Unit,
+    isEditing: Boolean = false
 ) {
     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(
@@ -73,18 +76,22 @@ fun ProfileSetupScreen(
                 .padding(horizontal = BubtSpacing.Screen)
         ) {
             OnboardingTopBar(
-                title = "Set up profile",
+                title = if (isEditing) "Edit profile" else "Set up profile",
                 onBack = onBack,
                 trailing = {
-                    Text(
-                        text = "1 of 2",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    if (!isEditing) {
+                        Text(
+                            text = "1 of 2",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             )
-            Spacer(modifier = Modifier.height(BubtSpacing.Sm))
-            StepProgress(totalSteps = 2, completedSteps = 1)
+            if (!isEditing) {
+                Spacer(modifier = Modifier.height(BubtSpacing.Sm))
+                StepProgress(totalSteps = 2, completedSteps = 1)
+            }
 
             Column(
                 modifier = Modifier
@@ -94,7 +101,7 @@ fun ProfileSetupScreen(
                 verticalArrangement = Arrangement.spacedBy(BubtSpacing.Lg)
             ) {
                 Text(
-                    text = "Tell us a bit about you. No login needed.",
+                    text = if (isEditing) "Update your basic details." else "Tell us a bit about you. No login needed.",
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -134,13 +141,15 @@ fun ProfileSetupScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 BubtPrimaryButton(
-                    text = "Continue",
+                    text = if (isEditing) "Save" else "Continue",
                     onClick = onContinue,
                     enabled = state.canContinue,
                     modifier = Modifier.fillMaxWidth()
                 )
-                Spacer(modifier = Modifier.height(BubtSpacing.Xs))
-                BubtTextButton(text = "Skip for now", onClick = onSkip)
+                if (!isEditing) {
+                    Spacer(modifier = Modifier.height(BubtSpacing.Xs))
+                    BubtTextButton(text = "Skip for now", onClick = onSkip)
+                }
             }
         }
     }

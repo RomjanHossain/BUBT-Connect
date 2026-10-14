@@ -23,6 +23,7 @@ object Routes {
     const val ANNEX_LOGIN = "annex_login"     // 1e
     const val HOME = "home"                   // 1f, inside MainScaffold
     const val NOTIFICATIONS = "notifications"
+    const val EDIT_PROFILE = "edit_profile"   // 1c in edit mode, from Profile (1s)
 }
 
 @Composable
@@ -57,7 +58,21 @@ fun AppNavGraph(navController: NavHostController = rememberNavController()) {
         composable(Routes.HOME) {
             MainScaffold(
                 onNotifications = { navController.navigate(Routes.NOTIFICATIONS) },
-                onConnectAnnex = { navController.navigate(Routes.ANNEX_LOGIN) }
+                onConnectAnnex = { navController.navigate(Routes.ANNEX_LOGIN) },
+                onEditProfile = { navController.navigate(Routes.EDIT_PROFILE) },
+                onLoggedOut = {
+                    navController.navigate(Routes.WELCOME) {
+                        popUpTo(navController.graph.id) { inclusive = true }
+                    }
+                }
+            )
+        }
+        composable(Routes.EDIT_PROFILE) {
+            ProfileSetupRoute(
+                onBack = { navController.popBackStack() },
+                onContinue = { navController.popBackStack() },
+                onSkip = { navController.popBackStack() },
+                isEditing = true
             )
         }
         composable(Routes.NOTIFICATIONS) {

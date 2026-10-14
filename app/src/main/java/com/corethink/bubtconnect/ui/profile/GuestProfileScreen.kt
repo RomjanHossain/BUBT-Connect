@@ -230,14 +230,16 @@ private fun SummaryRow(label: String, value: String) {
     }
 }
 
+/** Inline Annex auth card — shared by 1d and the guest Profile (1s). */
 @Composable
-private fun ConnectAnnexCard(
+fun ConnectAnnexCard(
     state: AnnexLoginUiState,
     onAnnexIdChange: (String) -> Unit,
     onPasswordChange: (String) -> Unit,
-    onConnect: () -> Unit
+    onConnect: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    BubtCard(style = BubtCardStyle.Outlined) {
+    BubtCard(modifier = modifier, style = BubtCardStyle.Outlined) {
         Text(
             text = "Connect Annex Account",
             style = MaterialTheme.typography.titleMedium,

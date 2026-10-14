@@ -441,7 +441,7 @@ fun BubtCard(
     style: BubtCardStyle = BubtCardStyle.Elevated,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    val dark = androidx.compose.foundation.isSystemInDarkTheme()
+    val dark = MaterialTheme.colorScheme.background != BubtBackgroundLight
     val container = when (style) {
         BubtCardStyle.Elevated -> if (dark) BubtCardElevatedDark else BubtCardElevatedLight
         BubtCardStyle.Filled -> MaterialTheme.colorScheme.primaryContainer

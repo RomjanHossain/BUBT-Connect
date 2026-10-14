@@ -9,6 +9,9 @@ sealed interface AnnexAuthResult {
 
 interface AnnexAuthRepository {
     suspend fun login(studentId: String, password: String, keepSignedIn: Boolean): AnnexAuthResult
+
+    /** Re-pulls attendance, results and routine; returns false on failure. */
+    suspend fun sync(): Boolean
 }
 
 /**
@@ -22,5 +25,11 @@ object FakeAnnexAuthRepository : AnnexAuthRepository {
         if (!valid) return AnnexAuthResult.InvalidCredentials
         ProfileRepository.Default.markAnnexConnected()
         return AnnexAuthResult.Success
+    }
+
+    override suspend fun sync(): Boolean {
+        delay(1500)
+        ProfileRepository.Default.markSynced()
+        return true
     }
 }

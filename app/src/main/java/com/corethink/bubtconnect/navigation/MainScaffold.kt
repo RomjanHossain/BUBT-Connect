@@ -37,6 +37,7 @@ import androidx.navigation.compose.rememberNavController
 import com.corethink.bubtconnect.ui.design.BubtSpacing
 import com.corethink.bubtconnect.ui.home.HomeRoute
 import com.corethink.bubtconnect.ui.home.QuickAction
+import com.corethink.bubtconnect.ui.profile.ProfileRoute
 
 enum class MainTab(
     val route: String,
@@ -56,6 +57,8 @@ enum class MainTab(
 fun MainScaffold(
     onNotifications: () -> Unit,
     onConnectAnnex: () -> Unit,
+    onEditProfile: () -> Unit,
+    onLoggedOut: () -> Unit,
     tabNavController: NavHostController = rememberNavController()
 ) {
     val backStackEntry by tabNavController.currentBackStackEntryAsState()
@@ -120,7 +123,9 @@ fun MainScaffold(
             composable(MainTab.Academics.route) { ComingSoon(MainTab.Academics.label) }
             composable(MainTab.Scan.route) { ComingSoon(MainTab.Scan.label) }
             composable(MainTab.Community.route) { ComingSoon(MainTab.Community.label) }
-            composable(MainTab.Profile.route) { ComingSoon(MainTab.Profile.label) }
+            composable(MainTab.Profile.route) {
+                ProfileRoute(onEditProfile = onEditProfile, onLoggedOut = onLoggedOut)
+            }
         }
     }
 }

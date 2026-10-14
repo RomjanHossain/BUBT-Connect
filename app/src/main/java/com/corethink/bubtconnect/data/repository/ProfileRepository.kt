@@ -17,8 +17,24 @@ class ProfileRepository {
         _profile.value = profile
     }
 
+    /** Epoch millis of the last successful Annex sync; null while in guest mode. */
+    private val _lastSyncedAt = MutableStateFlow<Long?>(null)
+    val lastSyncedAt: StateFlow<Long?> = _lastSyncedAt.asStateFlow()
+
     fun markAnnexConnected() {
         _annexConnected.value = true
+        markSynced()
+    }
+
+    fun markSynced(at: Long = System.currentTimeMillis()) {
+        _lastSyncedAt.value = at
+    }
+
+    /** Clears the profile and Annex session; the user returns to onboarding. */
+    fun logout() {
+        _profile.value = null
+        _annexConnected.value = false
+        _lastSyncedAt.value = null
     }
 
     companion object {
