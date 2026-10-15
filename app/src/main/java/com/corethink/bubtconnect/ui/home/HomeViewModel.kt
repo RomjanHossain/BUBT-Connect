@@ -11,10 +11,14 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import java.text.SimpleDateFormat
 import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 
 data class HomeUiState(
     val greeting: String = "",
+    val bengaliLine: String = "",
     val displayName: String = "",
     val isGuest: Boolean = true,
     val courses: List<Course> = emptyList(),
@@ -36,6 +40,7 @@ class HomeViewModel(
     ) { profile, connected ->
         HomeUiState(
             greeting = greetingFor(currentHour()),
+            bengaliLine = bengaliLineFor(currentHour()),
             displayName = profile?.name ?: if (connected) "Student" else "Guest Student",
             isGuest = !connected,
             courses = courses,
@@ -46,6 +51,7 @@ class HomeViewModel(
         started = SharingStarted.WhileSubscribed(5_000),
         initialValue = HomeUiState(
             greeting = greetingFor(currentHour()),
+            bengaliLine = bengaliLineFor(currentHour()),
             courses = courses,
             highlights = highlights
         )
@@ -57,6 +63,18 @@ class HomeViewModel(
             in 12..16 -> "Good afternoon,"
             in 17..20 -> "Good evening,"
             else -> "Hello,"
+        }
+
+        /** Spec 1g: "শুভ সকাল · Sunday, 11 Oct" above the greeting. */
+        fun bengaliLineFor(hour: Int): String {
+            val bangla = when (hour) {
+                in 5..11 -> "শুভ সকাল"
+                in 12..16 -> "শুভ দুপুর"
+                in 17..20 -> "শুভ সন্ধ্যা"
+                else -> "শুভ রাত"
+            }
+            val date = SimpleDateFormat("EEEE, d MMM", Locale.getDefault()).format(Date())
+            return "$bangla · $date"
         }
     }
 }

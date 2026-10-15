@@ -2,6 +2,7 @@ package com.corethink.bubtconnect.ui.home
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,10 +30,12 @@ import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.DocumentScanner
 import androidx.compose.material.icons.automirrored.outlined.EventNote
 import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.NotificationsActive
 import androidx.compose.material.icons.outlined.NotificationsNone
 import androidx.compose.material.icons.outlined.Payments
 import androidx.compose.material.icons.outlined.Place
-import androidx.compose.material.icons.outlined.ViewWeek
+import androidx.compose.material.icons.outlined.School
+import androidx.compose.material.icons.outlined.ViewTimeline
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -63,8 +66,8 @@ import java.util.Locale
 
 enum class QuickAction(val label: String, val icon: ImageVector, val needsAnnex: Boolean = false) {
     ScanDocument("Scan Document", Icons.Outlined.DocumentScanner),
-    ViewRoutine("View Routine", Icons.Outlined.ViewWeek),
-    CheckResult("Check Result", Icons.Outlined.Assessment, needsAnnex = true),
+    ViewRoutine("View Routine", Icons.Outlined.ViewTimeline),
+    CheckResult("Check Result", Icons.Outlined.School, needsAnnex = true),
     AcademicCalendar("Academic Calendar", Icons.Outlined.CalendarMonth)
 }
 
@@ -72,6 +75,7 @@ enum class QuickAction(val label: String, val icon: ImageVector, val needsAnnex:
 fun HomeRoute(
     onNotifications: () -> Unit,
     onCourseClick: (Course) -> Unit,
+    onSeeAll: () -> Unit = {},
     onQuickAction: (QuickAction) -> Unit,
     onHighlightClick: (DashboardHighlight) -> Unit,
     onConnectAnnex: () -> Unit,
@@ -82,6 +86,7 @@ fun HomeRoute(
         state = state,
         onNotifications = onNotifications,
         onCourseClick = onCourseClick,
+        onSeeAll = onSeeAll,
         onHighlightClick = onHighlightClick,
         // Guest mode: locked actions open Annex login (1e) instead.
         onQuickAction = { action ->
@@ -90,7 +95,7 @@ fun HomeRoute(
     )
 }
 
-/** 1f · Dashboard. Bell opens notifications. */
+/** 1g · Dashboard. Bell opens notifications. */
 @Composable
 fun HomeScreen(
     state: HomeUiState,
@@ -98,6 +103,7 @@ fun HomeScreen(
     onCourseClick: (Course) -> Unit,
     onQuickAction: (QuickAction) -> Unit,
     modifier: Modifier = Modifier,
+    onSeeAll: () -> Unit = {},
     onHighlightClick: (DashboardHighlight) -> Unit = {}
 ) {
     Column(
@@ -107,6 +113,7 @@ fun HomeScreen(
             .padding(vertical = BubtSpacing.Lg)
     ) {
         HomeHeader(
+            bengaliLine = state.bengaliLine,
             greeting = state.greeting,
             name = state.displayName,
             onNotifications = onNotifications,
@@ -114,7 +121,7 @@ fun HomeScreen(
         )
         Spacer(modifier = Modifier.height(BubtSpacing.Xl))
 
-        SectionTitle("Present Courses")
+        SectionHeader(title = "Present Courses", actionLabel = "See all", onAction = onSeeAll)
         LazyRow(
             contentPadding = PaddingValues(horizontal = BubtSpacing.Screen),
             horizontalArrangement = Arrangement.spacedBy(BubtSpacing.Sm)
@@ -130,7 +137,7 @@ fun HomeScreen(
             Spacer(modifier = Modifier.height(BubtSpacing.Xl))
         }
 
-        SectionTitle("Quick Actions")
+        SectionHeader(title = "Quick actions")
         QuickActionsGrid(
             isGuest = state.isGuest,
             onQuickAction = onQuickAction,
@@ -141,6 +148,7 @@ fun HomeScreen(
 
 @Composable
 private fun HomeHeader(
+    bengaliLine: String,
     greeting: String,
     name: String,
     onNotifications: () -> Unit,
@@ -162,13 +170,15 @@ private fun HomeHeader(
         }
         Spacer(modifier = Modifier.width(BubtSpacing.Md))
         Column(modifier = Modifier.weight(1f)) {
+            if (bengaliLine.isNotBlank()) {
+                Text(
+                    text = bengaliLine,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
             Text(
-                text = greeting,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                text = name,
+                text = "${greeting.removeSuffix(",")} $name",
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
@@ -194,13 +204,31 @@ private fun HomeHeader(
 }
 
 @Composable
-private fun SectionTitle(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.titleMedium,
-        color = MaterialTheme.colorScheme.onSurface,
-        modifier = Modifier.padding(horizontal = BubtSpacing.Screen, vertical = BubtSpacing.Md)
-    )
+private fun SectionHeader(title: String, actionLabel: String? = null, onAction: () -> Unit = {}) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = BubtSpacing.Screen, vertical = BubtSpacing.Md),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.weight(1f)
+        )
+        if (actionLabel != null) {
+            Text(
+                text = actionLabel,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier
+                    .clip(BubtShapes.Chip)
+                    .clickable(onClick = onAction)
+                    .padding(horizontal = BubtSpacing.Xs, vertical = BubtSpacing.Xs)
+            )
+        }
+    }
 }
 
 // ------------------------------------------------------------- highlights
@@ -227,12 +255,19 @@ private fun HighlightCard(highlight: DashboardHighlight, onClick: () -> Unit) {
     when (highlight) {
         is DashboardHighlight.NextClass -> {
             val minutesUntil = remember(highlight) { minutesUntil(highlight.startMinuteOfDay) }
+            val subtitle = listOfNotNull(
+                highlight.course.code,
+                highlight.section,
+                highlight.instructor
+            ).joinToString(" · ")
             HighlightSurface(
                 onClick = onClick,
                 container = colors.primaryContainer,
                 content = colors.onPrimaryContainer,
                 eyebrow = "Next class · in ${formatDuration(minutesUntil)}",
-                title = "${highlight.course.code} · ${highlight.course.title}",
+                title = highlight.course.title,
+                subtitle = subtitle,
+                trailingIcon = Icons.Outlined.NotificationsActive,
                 lines = listOf(
                     Icons.Outlined.AccessTime to formatTimeRange(highlight.startMinuteOfDay, highlight.endMinuteOfDay),
                     Icons.Outlined.Place to highlight.room
@@ -270,7 +305,9 @@ private fun HighlightSurface(
     content: Color,
     eyebrow: String,
     title: String,
-    lines: List<Pair<ImageVector, String>>
+    lines: List<Pair<ImageVector, String>>,
+    subtitle: String? = null,
+    trailingIcon: ImageVector? = null
 ) {
     Surface(
         onClick = onClick,
@@ -282,11 +319,17 @@ private fun HighlightSurface(
         contentColor = content
     ) {
         Column(modifier = Modifier.padding(BubtSpacing.CardPadding)) {
-            Text(
-                text = eyebrow.uppercase(),
-                style = MaterialTheme.typography.labelSmall,
-                color = content.copy(alpha = 0.8f)
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = eyebrow.uppercase(),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = content.copy(alpha = 0.8f),
+                    modifier = Modifier.weight(1f)
+                )
+                if (trailingIcon != null) {
+                    Icon(imageVector = trailingIcon, contentDescription = "Reminder on", modifier = Modifier.size(20.dp))
+                }
+            }
             Spacer(modifier = Modifier.height(BubtSpacing.Xs))
             Text(
                 text = title,
@@ -294,6 +337,16 @@ private fun HighlightSurface(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
+            if (subtitle != null) {
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = content.copy(alpha = 0.8f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
             Spacer(modifier = Modifier.height(BubtSpacing.Md))
             lines.forEach { (icon, text) ->
                 Row(

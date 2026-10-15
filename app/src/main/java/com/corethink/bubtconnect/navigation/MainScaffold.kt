@@ -126,6 +126,7 @@ fun MainScaffold(
                 HomeRoute(
                     onNotifications = onNotifications,
                     onCourseClick = { openAcademics(AcademicsTab.Courses) },
+                    onSeeAll = { openAcademics(AcademicsTab.Courses) },
                     onQuickAction = { action ->
                         when (action) {
                             QuickAction.ScanDocument -> selectTab(MainTab.Scan)

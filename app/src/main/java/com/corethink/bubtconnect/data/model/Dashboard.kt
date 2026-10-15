@@ -11,7 +11,9 @@ sealed interface DashboardHighlight {
         val course: Course,
         val startMinuteOfDay: Int,
         val endMinuteOfDay: Int,
-        val room: String
+        val room: String,
+        val section: String? = null,
+        val instructor: String? = null
     ) : DashboardHighlight
 
     data class ExamAlert(

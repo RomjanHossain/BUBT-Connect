@@ -17,9 +17,9 @@ object SampleDashboardRepository : DashboardRepository {
     private val courses = listOf(
         Course("CSE 231", "Data Structures"),
         Course("CSE 233", "Digital Logic Design"),
-        Course("MAT 231", "Linear Algebra"),
-        Course("EEE 203", "Electronic Devices & Circuits"),
-        Course("ENG 201", "Technical Writing")
+        Course("MAT 231", "Calculus II"),
+        Course("EEE 203", "Electronics"),
+        Course("ENG 102", "English II")
     )
 
     override fun presentCourses(): List<Course> = courses
@@ -33,7 +33,9 @@ object SampleDashboardRepository : DashboardRepository {
                 course = courses[0],
                 startMinuteOfDay = start,
                 endMinuteOfDay = (start + 75) % (24 * 60),
-                room = "Room 4-302, Building 4"
+                room = "Room 4-302",
+                section = "Section 2",
+                instructor = "Dr. M. Rahman"
             ),
             DashboardHighlight.ExamAlert(
                 course = courses[2],
