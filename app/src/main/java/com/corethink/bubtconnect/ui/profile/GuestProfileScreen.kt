@@ -220,32 +220,68 @@ fun ConnectAnnexCard(
     onConnect: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    BubtCard(modifier = modifier, style = BubtCardStyle.Filled) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                imageVector = Icons.Outlined.Link,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onPrimaryContainer
-            )
-            Spacer(modifier = Modifier.width(BubtSpacing.Sm))
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = BubtShapes.Card,
+        color = MaterialTheme.colorScheme.primary,
+        contentColor = MaterialTheme.colorScheme.onPrimary
+    ) {
+        Column(modifier = Modifier.padding(BubtSpacing.CardPadding)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Outlined.Link,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onPrimary
+                )
+                Spacer(modifier = Modifier.width(BubtSpacing.Sm))
+                Text(
+                    text = "Connect your Annex account",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onPrimary
+                )
+            }
+            Spacer(modifier = Modifier.height(BubtSpacing.Xs))
             Text(
-                text = "Connect your Annex account",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
+                text = "Use your BUBT Annex ID and password to unlock:",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.9f)
             )
-        }
-        Spacer(modifier = Modifier.height(BubtSpacing.Xs))
-        Text(
-            text = "Use your BUBT Annex ID and password to unlock:",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onPrimaryContainer
-        )
-        Spacer(modifier = Modifier.height(BubtSpacing.Md))
-        Row(horizontalArrangement = Arrangement.spacedBy(BubtSpacing.Sm)) {
-            BubtChip(text = "Attendance", style = BubtChipStyle.Normal)
-            BubtChip(text = "Results", style = BubtChipStyle.Normal)
-            BubtChip(text = "Class routine", style = BubtChipStyle.Normal)
-        }
+            Spacer(modifier = Modifier.height(BubtSpacing.Md))
+            Row(horizontalArrangement = Arrangement.spacedBy(BubtSpacing.Sm)) {
+                Surface(
+                    shape = BubtShapes.Chip,
+                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.18f),
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                ) {
+                    Text(
+                        text = "Attendance",
+                        style = MaterialTheme.typography.labelMedium,
+                        modifier = Modifier.padding(horizontal = BubtSpacing.Sm, vertical = BubtSpacing.Xs)
+                    )
+                }
+                Surface(
+                    shape = BubtShapes.Chip,
+                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.18f),
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                ) {
+                    Text(
+                        text = "Results",
+                        style = MaterialTheme.typography.labelMedium,
+                        modifier = Modifier.padding(horizontal = BubtSpacing.Sm, vertical = BubtSpacing.Xs)
+                    )
+                }
+                Surface(
+                    shape = BubtShapes.Chip,
+                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.18f),
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                ) {
+                    Text(
+                        text = "Class routine",
+                        style = MaterialTheme.typography.labelMedium,
+                        modifier = Modifier.padding(horizontal = BubtSpacing.Sm, vertical = BubtSpacing.Xs)
+                    )
+                }
+            }
         Spacer(modifier = Modifier.height(BubtSpacing.Lg))
         BubtTextField(
             value = state.studentId,
@@ -266,15 +302,30 @@ fun ConnectAnnexCard(
                 modifier = Modifier.padding(top = BubtSpacing.Md)
             )
         }
-        Spacer(modifier = Modifier.height(BubtSpacing.Lg))
-        BubtPrimaryButton(
-            text = if (state.isLoading) "Connecting…" else "Connect Annex",
-            onClick = onConnect,
-            enabled = state.canSubmit,
-            loading = state.isLoading,
-            modifier = Modifier.fillMaxWidth()
-        )
+            Spacer(modifier = Modifier.height(BubtSpacing.Lg))
+            Surface(
+                onClick = if (state.canSubmit && !state.isLoading) onConnect else ({}),
+                modifier = Modifier.fillMaxWidth(),
+                shape = BubtShapes.Button,
+                color = MaterialTheme.colorScheme.onPrimary,
+                contentColor = MaterialTheme.colorScheme.primary,
+                enabled = state.canSubmit && !state.isLoading
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = if (state.isLoading) "Connecting…" else "Connect Annex",
+                        style = MaterialTheme.typography.labelLarge
+                    )
+                }
+            }
     }
+}
 }
 
 @Preview(showBackground = true)
