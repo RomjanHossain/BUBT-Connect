@@ -1,5 +1,6 @@
 package com.corethink.bubtconnect.ui.community
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
@@ -17,14 +18,19 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.outlined.Bookmarks
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.FileDownload
+import androidx.compose.material.icons.outlined.IosShare
 import androidx.compose.material.icons.outlined.PictureAsPdf
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.VisibilityOff
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -33,7 +39,12 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -53,6 +64,8 @@ import com.corethink.bubtconnect.ui.components.showNotAvailableYet
 import com.corethink.bubtconnect.ui.design.BUBTConnectMaterial3Theme
 import com.corethink.bubtconnect.ui.design.BubtShapes
 import com.corethink.bubtconnect.ui.design.BubtSpacing
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 
 @Composable
 fun CommunityRoute(viewModel: CommunityViewModel = viewModel()) {
@@ -64,11 +77,13 @@ fun CommunityRoute(viewModel: CommunityViewModel = viewModel()) {
         onSelectFilter = viewModel::selectFilter,
         onOpenPost = { showNotAvailableYet(context, "PDF preview") },
         onToggleLike = { viewModel.toggleLike(it.post.id) },
-        onDownload = { showNotAvailableYet(context, "Offline downloads") }
+        onDownload = { showNotAvailableYet(context, "Offline downloads") },
+        onShare = { showNotAvailableYet(context, "Share your notes") },
+        onOpenBookmarks = { showNotAvailableYet(context, "Bookmarks") }
     )
 }
 
-/** 1r · Community feed. Card tap = PDF preview, filled heart = liked, downloads cached for offline. */
+/** 1t · Community feed. Card tap = PDF preview, filled heart = liked; Share FAB shrinks while scrolling down. */
 @Composable
 fun CommunityScreen(
     state: CommunityUiState,
@@ -77,59 +92,108 @@ fun CommunityScreen(
     onOpenPost: (CommunityPostItem) -> Unit,
     onToggleLike: (CommunityPostItem) -> Unit,
     onDownload: (CommunityPostItem) -> Unit,
+    onShare: () -> Unit,
+    onOpenBookmarks: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    LazyColumn(
-        modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = BubtSpacing.Screen, vertical = BubtSpacing.Lg),
-        verticalArrangement = Arrangement.spacedBy(BubtSpacing.Md)
-    ) {
-        item {
-            Text(
-                text = "Community",
-                style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.padding(bottom = BubtSpacing.Sm)
-            )
-        }
-        item {
-            CommunitySearchField(query = state.query, onQueryChange = onQueryChange)
-        }
-        item {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState())
-                    .padding(bottom = BubtSpacing.Xs),
-                horizontalArrangement = Arrangement.spacedBy(BubtSpacing.Sm)
-            ) {
-                CommunityFilter.entries.forEach { filter ->
-                    FilterPill(
-                        text = filter.label,
-                        selected = filter == state.filter,
-                        onClick = { onSelectFilter(filter) }
+    val listState = rememberLazyListState()
+    var fabExpanded by remember { mutableStateOf(true) }
+    LaunchedEffect(listState) {
+        var lastIndex = 0
+        var lastOffset = 0
+        snapshotFlow { listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset }
+            .collect { (index, offset) ->
+                val goingDown = index > lastIndex || (index == lastIndex && offset > lastOffset)
+                val goingUp = index < lastIndex || (index == lastIndex && offset < lastOffset)
+                if (goingDown && (index > 0 || offset > 24)) fabExpanded = false
+                if (goingUp) fabExpanded = true
+                lastIndex = index
+                lastOffset = offset
+            }
+    }
+
+    Box(modifier = modifier.fillMaxSize()) {
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(horizontal = BubtSpacing.Screen, vertical = BubtSpacing.Lg),
+            verticalArrangement = Arrangement.spacedBy(BubtSpacing.Md)
+        ) {
+            item {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "Community",
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(bottom = BubtSpacing.Sm)
+                    )
+                    IconButton(onClick = onOpenBookmarks) {
+                        Icon(
+                            imageVector = Icons.Outlined.Bookmarks,
+                            contentDescription = "Bookmarks",
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+            }
+            item {
+                CommunitySearchField(query = state.query, onQueryChange = onQueryChange)
+            }
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
+                        .padding(bottom = BubtSpacing.Xs),
+                    horizontalArrangement = Arrangement.spacedBy(BubtSpacing.Sm)
+                ) {
+                    CommunityFilter.entries.forEach { filter ->
+                        FilterPill(
+                            text = filter.label,
+                            selected = filter == state.filter,
+                            onClick = { onSelectFilter(filter) }
+                        )
+                    }
+                }
+            }
+            if (state.posts.isEmpty()) {
+                item {
+                    Text(
+                        text = if (state.query.isBlank()) "Nothing shared here yet."
+                        else "No posts match \"${state.query.trim()}\".",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(vertical = BubtSpacing.Lg)
                     )
                 }
             }
-        }
-        if (state.posts.isEmpty()) {
-            item {
-                Text(
-                    text = if (state.query.isBlank()) "Nothing shared here yet."
-                    else "No posts match \"${state.query.trim()}\".",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(vertical = BubtSpacing.Lg)
+            items(state.posts, key = { it.post.id }) { item ->
+                CommunityPostCard(
+                    item = item,
+                    onOpen = { onOpenPost(item) },
+                    onToggleLike = { onToggleLike(item) },
+                    onDownload = { onDownload(item) }
                 )
             }
         }
-        items(state.posts, key = { it.post.id }) { item ->
-            CommunityPostCard(
-                item = item,
-                onOpen = { onOpenPost(item) },
-                onToggleLike = { onToggleLike(item) },
-                onDownload = { onDownload(item) }
-            )
+        FloatingActionButton(
+            onClick = onShare,
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(BubtSpacing.Screen)
+        ) {
+            Icon(imageVector = Icons.Outlined.IosShare, contentDescription = "Share")
+            AnimatedVisibility(visible = fabExpanded) {
+                Text(
+                    text = "Share",
+                    style = MaterialTheme.typography.labelLarge,
+                    modifier = Modifier.padding(start = BubtSpacing.Sm)
+                )
+            }
         }
     }
 }
@@ -200,21 +264,30 @@ private fun CommunityPostCard(
                         overflow = TextOverflow.Ellipsis
                     )
                     Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = "by ${post.author ?: ANONYMOUS} · ${formatDaysAgo(post.daysAgo)}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (post.author == null) {
+                            Icon(
+                                imageVector = Icons.Outlined.VisibilityOff,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(modifier = Modifier.width(BubtSpacing.Xs))
+                        }
+                        Text(
+                            text = "${post.author ?: ANONYMOUS} · ${post.department}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
             }
             Spacer(modifier = Modifier.height(BubtSpacing.Md))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                DepartmentTag(post.department)
-                Spacer(modifier = Modifier.width(BubtSpacing.Sm))
                 Text(
-                    text = "${formatCompactCount(post.views)} views",
+                    text = "${formatCompactCount(post.views)} views · ${formatDaysAgo(post.daysAgo)}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.weight(1f)
@@ -243,22 +316,6 @@ private fun CommunityPostCard(
 }
 
 private val ActionHeight = 36.dp
-
-@Composable
-private fun DepartmentTag(department: String) {
-    Surface(
-        shape = BubtShapes.Chip,
-        color = MaterialTheme.colorScheme.surface,
-        contentColor = MaterialTheme.colorScheme.onSurface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
-    ) {
-        Text(
-            text = department,
-            style = MaterialTheme.typography.labelSmall,
-            modifier = Modifier.padding(horizontal = BubtSpacing.Sm, vertical = 2.dp)
-        )
-    }
-}
 
 /** Outlined when not liked, solid primary once liked. */
 @Composable
@@ -289,7 +346,7 @@ private fun LikeButton(liked: Boolean, count: Int, onClick: () -> Unit) {
 @Preview(showBackground = true, heightDp = 800)
 @Composable
 private fun CommunityScreenPreview() {
-    val posts = SampleCommunityRepository.posts.value
+    val posts = runBlocking { SampleCommunityRepository.posts.first() }
     val liked = posts.filter { it.likedByMe }.map { it.id }.toSet()
     BUBTConnectMaterial3Theme {
         Surface(color = MaterialTheme.colorScheme.background) {
@@ -299,7 +356,9 @@ private fun CommunityScreenPreview() {
                 onSelectFilter = {},
                 onOpenPost = {},
                 onToggleLike = {},
-                onDownload = {}
+                onDownload = {},
+                onShare = {},
+                onOpenBookmarks = {}
             )
         }
     }

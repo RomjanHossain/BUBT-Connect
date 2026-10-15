@@ -17,7 +17,8 @@ enum class CommunityFilter(val label: String) {
     All("All"),
     Cse("CSE"),
     LabReports("Lab Reports"),
-    Internship("Internship")
+    Internship("Internship"),
+    Bba("BBA")
 }
 
 data class CommunityPostItem(
@@ -97,6 +98,7 @@ class CommunityViewModel(
                     CommunityFilter.Cse -> post.department == "CSE"
                     CommunityFilter.LabReports -> post.category == PostCategory.LabReport
                     CommunityFilter.Internship -> post.category == PostCategory.Internship
+                    CommunityFilter.Bba -> post.department == "BBA"
                 }
                 matchesQuery && matchesFilter
             }
