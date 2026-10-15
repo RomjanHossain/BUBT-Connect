@@ -72,6 +72,16 @@ fun RoutineContent(
         Calendar.getInstance().let { it.get(Calendar.HOUR_OF_DAY) * 60 + it.get(Calendar.MINUTE) }
     }
     val isToday = state.selectedDay == state.today
+    // Day-of-month for each chip, anchored to this week (SAT 10, SUN 11, …).
+    val dayDates = remember {
+        val todayDow = Calendar.getInstance().get(Calendar.DAY_OF_WEEK)
+        val todayIndex = ClassDay.entries.indexOfFirst { it.calendarDay == todayDow }
+            .let { if (it == -1) 0 else it }
+        ClassDay.entries.mapIndexed { index, _ ->
+            Calendar.getInstance().apply { add(Calendar.DAY_OF_MONTH, index - todayIndex) }
+                .get(Calendar.DAY_OF_MONTH)
+        }
+    }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -82,9 +92,10 @@ fun RoutineContent(
                 contentPadding = PaddingValues(horizontal = BubtSpacing.Screen, vertical = BubtSpacing.Md),
                 horizontalArrangement = Arrangement.spacedBy(BubtSpacing.Sm)
             ) {
-                items(ClassDay.entries) { day ->
+                items(ClassDay.entries.size) { index ->
+                    val day = ClassDay.entries[index]
                     FilterPill(
-                        text = day.label,
+                        text = "${day.label.uppercase()} ${dayDates[index]}",
                         selected = day == state.selectedDay,
                         onClick = { onSelectDay(day) }
                     )
@@ -104,6 +115,7 @@ fun RoutineContent(
         items(state.slots.size) { index ->
             val slot = state.slots[index]
             val isNow = isToday && nowMinute in slot.startMinute until slot.endMinute
+            val isPast = isToday && nowMinute >= slot.endMinute
             TimelineRow(
                 startMinute = slot.startMinute,
                 isNow = isNow,
@@ -114,6 +126,8 @@ fun RoutineContent(
                     is RoutineSlot.Class -> ClassCard(
                         slot = slot,
                         isNow = isNow,
+                        isPast = isPast,
+                        minutesLeft = (slot.endMinute - nowMinute).coerceAtLeast(0),
                         reminderOn = RoutineViewModel.reminderKey(state.selectedDay, slot) in state.reminders,
                         leadMinutes = state.reminderLeadMinutes,
                         onToggleReminder = { onToggleReminder(slot) }
@@ -191,6 +205,8 @@ private fun TimelineRow(
 private fun ClassCard(
     slot: RoutineSlot.Class,
     isNow: Boolean,
+    isPast: Boolean,
+    minutesLeft: Int,
     reminderOn: Boolean,
     leadMinutes: Int,
     onToggleReminder: () -> Unit
@@ -209,7 +225,13 @@ private fun ClassCard(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(text = slot.course.code, style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        text = slot.course.title,
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
                     if (isNow) {
                         Spacer(modifier = Modifier.width(BubtSpacing.Sm))
                         Surface(
@@ -226,14 +248,33 @@ private fun ClassCard(
                     }
                 }
                 Text(
-                    text = "${slot.course.title} · ${slot.location}",
+                    text = if (isNow) {
+                        "${slot.course.code} · ${slot.location} · $minutesLeft min left"
+                    } else {
+                        "${slot.course.code} · ${slot.location}"
+                    },
                     style = MaterialTheme.typography.bodySmall,
                     color = if (isNow) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
             }
-            ReminderToggle(on = reminderOn, leadMinutes = leadMinutes, onClick = onToggleReminder)
+            if (isPast && !isNow) {
+                Surface(
+                    shape = BubtShapes.Chip,
+                    color = MaterialTheme.colorScheme.surface,
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+                ) {
+                    Text(
+                        text = "Done",
+                        style = MaterialTheme.typography.labelMedium,
+                        modifier = Modifier.padding(horizontal = BubtSpacing.Md, vertical = BubtSpacing.Xs)
+                    )
+                }
+            } else {
+                ReminderToggle(on = reminderOn, leadMinutes = leadMinutes, onClick = onToggleReminder)
+            }
         }
     }
 }

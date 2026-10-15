@@ -31,7 +31,6 @@ enum class AcademicsTab(val label: String) {
 fun AcademicsScreen(
     selectedTab: AcademicsTab,
     onSelectTab: (AcademicsTab) -> Unit,
-    onConnectAnnex: () -> Unit,
     onOpenFees: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -60,8 +59,8 @@ fun AcademicsScreen(
         when (selectedTab) {
             AcademicsTab.Routine -> RoutineTab()
             AcademicsTab.Exams -> ExamsTab()
-            AcademicsTab.Results -> ResultsTab(onConnectAnnex = onConnectAnnex)
-            AcademicsTab.Attendance -> AttendanceTab(onConnectAnnex = onConnectAnnex)
+            AcademicsTab.Results -> ResultsTab()
+            AcademicsTab.Attendance -> AttendanceTab()
             AcademicsTab.Calendar -> CalendarTab(
                 onSeeExamRoutine = { onSelectTab(AcademicsTab.Exams) },
                 onOpenFees = onOpenFees

@@ -23,6 +23,14 @@ data class ResultsUiState(
 
     /** CGPA as of the selected semester. */
     val cgpa: Double get() = cgpaOf(semesters.take(selectedIndex + 1))
+
+    /** SGPA change versus the previous semester, or null in the first semester. */
+    val sgpaDelta: Double?
+        get() = if (selectedIndex == 0) null
+        else selected?.let { it.sgpa - semesters[selectedIndex - 1].sgpa }
+
+    /** Credits earned as of the selected semester. */
+    val totalCredits: Double get() = semesters.take(selectedIndex + 1).sumOf { it.credits }
 }
 
 class ResultsViewModel(

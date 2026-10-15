@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -18,6 +19,7 @@ import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -35,7 +37,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.corethink.bubtconnect.data.model.CourseStatus
 import com.corethink.bubtconnect.data.model.CurriculumCourse
 import com.corethink.bubtconnect.data.repository.SampleAcademicsRepository
-import com.corethink.bubtconnect.ui.components.FilterPill
+import com.corethink.bubtconnect.ui.components.BubtSegmentedControl
 import com.corethink.bubtconnect.ui.components.formatCredits
 import com.corethink.bubtconnect.ui.design.BUBTConnectMaterial3Theme
 import com.corethink.bubtconnect.ui.design.BubtShapes
@@ -51,7 +53,7 @@ fun CoursesTab(viewModel: CoursesViewModel = viewModel()) {
     )
 }
 
-/** 1l · All courses. Completed badge + filter only appear when Annex is connected. */
+/** 1m · All courses. Segmented filter, completion progress, Done badges on completed rows. */
 @Composable
 fun CoursesContent(
     state: CoursesUiState,
@@ -60,7 +62,8 @@ fun CoursesContent(
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = BubtSpacing.Screen, vertical = BubtSpacing.Md)
+        contentPadding = PaddingValues(horizontal = BubtSpacing.Screen, vertical = BubtSpacing.Md),
+        verticalArrangement = Arrangement.spacedBy(BubtSpacing.Md)
     ) {
         item {
             OutlinedTextField(
@@ -86,33 +89,39 @@ fun CoursesContent(
                 )
             )
         }
-        if (state.isConnected) {
-            item {
-                Row(
-                    modifier = Modifier.padding(top = BubtSpacing.Md),
-                    horizontalArrangement = Arrangement.spacedBy(BubtSpacing.Sm)
-                ) {
-                    CourseFilter.entries.forEach { filter ->
-                        FilterPill(
-                            text = filter.label,
-                            selected = filter == state.filter,
-                            onClick = { onSelectFilter(filter) }
-                        )
-                    }
-                }
-            }
+        item {
+            BubtSegmentedControl(
+                options = CourseFilter.entries,
+                selected = state.filter,
+                label = CourseFilter::label,
+                onSelect = onSelectFilter
+            )
         }
         item {
-            Text(
-                text = if (state.isConnected) {
-                    "${state.department} curriculum · ${state.completedCount} of ${state.totalCount} completed"
-                } else {
-                    "${state.department} curriculum · ${state.totalCount} courses"
-                },
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(vertical = BubtSpacing.Md)
-            )
+            Column {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "${state.completedCount} of ${state.totalCount} courses completed",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Text(
+                        text = "${state.progressPercent}%",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+                LinearProgressIndicator(
+                    progress = { state.progressPercent / 100f },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = BubtSpacing.Sm)
+                        .height(4.dp),
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = MaterialTheme.colorScheme.surfaceContainerHighest
+                )
+            }
         }
         if (state.courses.isEmpty()) {
             item {
@@ -124,14 +133,14 @@ fun CoursesContent(
             }
         }
         items(state.courses, key = { it.course.code }) { item ->
-            CourseRow(item = item, showStatus = state.isConnected)
+            CourseRow(item = item)
             HorizontalDivider(color = MaterialTheme.colorScheme.outline)
         }
     }
 }
 
 @Composable
-private fun CourseRow(item: CurriculumCourse, showStatus: Boolean) {
+private fun CourseRow(item: CurriculumCourse) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -140,41 +149,41 @@ private fun CourseRow(item: CurriculumCourse, showStatus: Boolean) {
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = item.course.code,
+                text = item.course.title,
                 style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
             Text(
-                text = "${item.course.title} · ${formatCredits(item.credits)} cr",
+                text = "${item.course.code} · ${formatCredits(item.credits)} credits",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
         }
-        if (showStatus) {
-            when (item.status) {
-                CourseStatus.Completed -> Surface(
-                    shape = BubtShapes.Chip,
-                    color = MaterialTheme.colorScheme.surface,
-                    contentColor = MaterialTheme.colorScheme.onSurface,
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+        when (item.status) {
+            CourseStatus.Completed -> Surface(
+                shape = BubtShapes.Chip,
+                color = MaterialTheme.colorScheme.surface,
+                contentColor = MaterialTheme.colorScheme.onSurface,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = BubtSpacing.Md, vertical = BubtSpacing.Xs),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = BubtSpacing.Md, vertical = BubtSpacing.Xs),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(14.dp))
-                        Text(text = " Completed", style = MaterialTheme.typography.labelMedium)
-                    }
+                    Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(14.dp))
+                    Text(text = " Done", style = MaterialTheme.typography.labelMedium)
                 }
-                CourseStatus.InProgress -> Text(
-                    text = "In progress",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                CourseStatus.Remaining -> Unit
             }
+            CourseStatus.InProgress -> Text(
+                text = "Ongoing",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
+            CourseStatus.Remaining -> Unit
         }
     }
 }
@@ -187,7 +196,6 @@ private fun CoursesContentPreview() {
         Surface(color = MaterialTheme.colorScheme.background) {
             CoursesContent(
                 state = CoursesUiState(
-                    isConnected = true,
                     courses = courses,
                     completedCount = courses.count { it.status == CourseStatus.Completed },
                     totalCount = courses.size

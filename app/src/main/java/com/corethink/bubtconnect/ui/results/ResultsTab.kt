@@ -15,12 +15,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.TrendingDown
+import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -40,25 +43,18 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.corethink.bubtconnect.data.model.CourseGrade
 import com.corethink.bubtconnect.data.model.SemesterResult
 import com.corethink.bubtconnect.data.repository.SampleAcademicsRepository
-import com.corethink.bubtconnect.ui.components.LockedFeature
 import com.corethink.bubtconnect.ui.components.formatGpa
 import com.corethink.bubtconnect.ui.components.formatCredits
 import com.corethink.bubtconnect.ui.design.BUBTConnectMaterial3Theme
+import com.corethink.bubtconnect.ui.design.BubtError
 import com.corethink.bubtconnect.ui.design.BubtShapes
 import com.corethink.bubtconnect.ui.design.BubtSpacing
+import com.corethink.bubtconnect.ui.design.BubtSuccess
 import com.corethink.bubtconnect.ui.onboarding.BubtDropdownField
 
 @Composable
-fun ResultsTab(onConnectAnnex: () -> Unit, viewModel: ResultsViewModel = viewModel()) {
+fun ResultsTab(viewModel: ResultsViewModel = viewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    if (!state.isConnected) {
-        LockedFeature(
-            title = "Results & CGPA",
-            message = "Connect your Annex account to see semester results, SGPA history and course grades.",
-            onConnect = onConnectAnnex
-        )
-        return
-    }
     ResultsContent(
         state = state,
         onSelectSemester = viewModel::selectSemester,
@@ -66,7 +62,7 @@ fun ResultsTab(onConnectAnnex: () -> Unit, viewModel: ResultsViewModel = viewMod
     )
 }
 
-/** 1i · Results. Requires Annex; guests see the locked state with the Connect CTA. */
+/** 1j · Results. Semester dropdown, SGPA delta, CGPA with credits, history bars, course grades. */
 @Composable
 fun ResultsContent(
     state: ResultsUiState,
@@ -93,6 +89,7 @@ fun ResultsContent(
             GpaCard(
                 label = "SGPA",
                 value = selected.sgpa,
+                delta = state.sgpaDelta,
                 container = MaterialTheme.colorScheme.surface,
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                 modifier = Modifier.weight(1f)
@@ -100,6 +97,7 @@ fun ResultsContent(
             GpaCard(
                 label = "CGPA",
                 value = state.cgpa,
+                subtitle = "${formatCredits(state.totalCredits)} credits",
                 container = MaterialTheme.colorScheme.primaryContainer,
                 border = null,
                 modifier = Modifier.weight(1f)
@@ -137,7 +135,9 @@ private fun GpaCard(
     value: Double,
     container: Color,
     border: BorderStroke?,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    delta: Double? = null,
+    subtitle: String? = null
 ) {
     Surface(
         modifier = modifier,
@@ -161,6 +161,26 @@ private fun GpaCard(
                 style = MaterialTheme.typography.displaySmall,
                 color = MaterialTheme.colorScheme.onSurface
             )
+            when {
+                delta != null -> Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = if (delta >= 0) Icons.Filled.TrendingUp else Icons.Filled.TrendingDown,
+                        contentDescription = null,
+                        tint = if (delta >= 0) BubtSuccess else BubtError,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = String.format(java.util.Locale.US, "%+.2f", delta),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = if (delta >= 0) BubtSuccess else BubtError
+                    )
+                }
+                subtitle != null -> Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                )
+            }
         }
     }
 }
@@ -174,6 +194,7 @@ private fun SgpaHistory(
 ) {
     val baseline = 2.0
     val ceiling = 4.0
+    val ordinals = listOf("1st", "2nd", "3rd", "4th", "5th", "6th")
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = BubtShapes.Card,
@@ -181,11 +202,19 @@ private fun SgpaHistory(
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
     ) {
         Column(modifier = Modifier.padding(BubtSpacing.CardPadding)) {
-            Text(
-                text = "SGPA history",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "SGPA history",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f)
+                )
+                Text(
+                    text = "out of 4.00",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
             Spacer(modifier = Modifier.height(BubtSpacing.Md))
             Row(
                 modifier = Modifier
@@ -233,7 +262,7 @@ private fun SgpaHistory(
             ) {
                 semesters.indices.forEach { index ->
                     Text(
-                        text = "S${index + 1}",
+                        text = ordinals.getOrElse(index) { "S${index + 1}" },
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.weight(1f),
@@ -254,14 +283,20 @@ private fun GradeRow(grade: CourseGrade, expanded: Boolean, onToggle: () -> Unit
             .padding(vertical = BubtSpacing.Md)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = "${grade.course.code} · ${grade.course.title}",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f)
-            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = grade.course.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = "${grade.course.code} · ${formatCredits(grade.credits)} cr",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
             Text(
                 text = grade.grade.label,
                 style = MaterialTheme.typography.titleMedium,
@@ -275,7 +310,7 @@ private fun GradeRow(grade: CourseGrade, expanded: Boolean, onToggle: () -> Unit
         }
         AnimatedVisibility(visible = expanded) {
             Text(
-                text = "${formatCredits(grade.credits)} credits · grade point ${formatGpa(grade.grade.point)}",
+                text = "Grade point ${formatGpa(grade.grade.point)}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = BubtSpacing.Xs)

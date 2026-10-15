@@ -17,7 +17,9 @@ data class ExamsUiState(
     val kind: ExamKind = ExamKind.Normal,
     /** Exams of [kind], grouped by term ("Mid-term · Fall 2026"), soonest first. */
     val groups: Map<String, List<Exam>> = emptyMap(),
-    val reminders: Set<String> = emptySet()
+    val reminders: Set<String> = emptySet(),
+    /** Total supplementary exams, for the banner on the Normal tab. */
+    val supplementaryCount: Int = 0
 )
 
 class ExamsViewModel(
@@ -26,13 +28,17 @@ class ExamsViewModel(
 ) : ViewModel() {
 
     private val kind = MutableStateFlow(ExamKind.Normal)
+    private val supplementaryCount = repository.exams().count { it.kind == ExamKind.Supplementary }
 
     val uiState: StateFlow<ExamsUiState> = combine(kind, reminderRepository.reminders) { kind, reminders ->
-        ExamsUiState(kind, groupsFor(kind), reminders)
+        ExamsUiState(kind, groupsFor(kind), reminders, supplementaryCount)
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
-        initialValue = ExamsUiState(groups = groupsFor(ExamKind.Normal))
+        initialValue = ExamsUiState(
+            groups = groupsFor(ExamKind.Normal),
+            supplementaryCount = supplementaryCount
+        )
     )
 
     private fun groupsFor(kind: ExamKind): Map<String, List<Exam>> =

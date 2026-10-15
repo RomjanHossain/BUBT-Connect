@@ -149,7 +149,6 @@ fun MainScaffold(
                 AcademicsScreen(
                     selectedTab = academicsTab,
                     onSelectTab = { academicsTab = it },
-                    onConnectAnnex = onConnectAnnex,
                     onOpenFees = onOpenFees
                 )
             }

@@ -15,9 +15,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.outlined.Download
+import androidx.compose.material.icons.outlined.EventBusy
 import androidx.compose.material.icons.outlined.NotificationsNone
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -51,16 +54,18 @@ fun ExamsTab(viewModel: ExamsViewModel = viewModel()) {
         state = state,
         onSelectKind = viewModel::selectKind,
         onDownloadPdf = { showNotAvailableYet(context, "Exam PDF") },
+        onDownloadAll = { showNotAvailableYet(context, "All exam PDFs") },
         onToggleReminder = viewModel::toggleReminder
     )
 }
 
-/** 1h · Exam routine. Reminder button flips to the filled "Reminder set" state. */
+/** 1i · Exam routine. Reminder button flips to the filled "Reminder set" state. */
 @Composable
 fun ExamsContent(
     state: ExamsUiState,
     onSelectKind: (ExamKind) -> Unit,
     onDownloadPdf: (Exam) -> Unit,
+    onDownloadAll: () -> Unit,
     onToggleReminder: (Exam) -> Unit
 ) {
     LazyColumn(
@@ -76,6 +81,14 @@ fun ExamsContent(
                 onSelect = onSelectKind
             )
         }
+        if (state.kind == ExamKind.Normal && state.supplementaryCount > 0) {
+            item {
+                SupplementaryBanner(
+                    count = state.supplementaryCount,
+                    onClick = { onSelectKind(ExamKind.Supplementary) }
+                )
+            }
+        }
         if (state.groups.isEmpty()) {
             item {
                 Text(
@@ -88,23 +101,38 @@ fun ExamsContent(
         }
         state.groups.forEach { (term, exams) ->
             item(key = term) {
-                Row(modifier = Modifier.fillMaxWidth()) {
+                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = term,
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.weight(1f)
                     )
-                    Text(
-                        text = "${exams.size} exam${if (exams.size == 1) "" else "s"}",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Surface(
+                        onClick = onDownloadAll,
+                        shape = BubtShapes.Chip,
+                        color = MaterialTheme.colorScheme.surface,
+                        contentColor = MaterialTheme.colorScheme.primary,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = BubtSpacing.Md, vertical = BubtSpacing.Xs),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Download,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(text = " All", style = MaterialTheme.typography.labelMedium)
+                        }
+                    }
                 }
             }
             items(exams, key = { it.id }) { exam ->
                 ExamCard(
                     exam = exam,
+                    supplementary = exam.kind == ExamKind.Supplementary,
                     reminderSet = ReminderRepository.examKey(exam.id) in state.reminders,
                     onDownloadPdf = { onDownloadPdf(exam) },
                     onToggleReminder = { onToggleReminder(exam) }
@@ -115,8 +143,43 @@ fun ExamsContent(
 }
 
 @Composable
+private fun SupplementaryBanner(count: Int, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = BubtShapes.Card,
+        color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.4f),
+        contentColor = MaterialTheme.colorScheme.onErrorContainer
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = BubtSpacing.CardPadding, vertical = BubtSpacing.Md),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.EventBusy,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp)
+            )
+            Text(
+                text = if (count == 1) "1 supplementary exam scheduled" else "$count supplementary exams scheduled",
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = BubtSpacing.Sm)
+            )
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+    }
+}
+
+@Composable
 private fun ExamCard(
     exam: Exam,
+    supplementary: Boolean,
     reminderSet: Boolean,
     onDownloadPdf: () -> Unit,
     onToggleReminder: () -> Unit
@@ -124,8 +187,9 @@ private fun ExamCard(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = BubtShapes.Card,
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+        color = if (supplementary) MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.4f)
+        else MaterialTheme.colorScheme.surface,
+        border = if (supplementary) null else BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
     ) {
         Column(modifier = Modifier.padding(BubtSpacing.CardPadding)) {
             Row(verticalAlignment = Alignment.Top) {
@@ -205,10 +269,12 @@ private fun ExamsContentPreview() {
             ExamsContent(
                 state = ExamsUiState(
                     groups = SampleAcademicsRepository.exams().filter { it.kind == ExamKind.Normal }.groupBy { it.term },
-                    reminders = setOf("exam:mid-cse231")
+                    reminders = setOf("exam:mid-cse231"),
+                    supplementaryCount = 1
                 ),
                 onSelectKind = {},
                 onDownloadPdf = {},
+                onDownloadAll = {},
                 onToggleReminder = {}
             )
         }

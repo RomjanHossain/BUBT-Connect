@@ -63,7 +63,12 @@ object SampleAcademicsRepository : AcademicsRepository {
             RoutineSlot.Break(t(9, 45), t(10, 30)),
             RoutineSlot.Class(eee203, "Rm 3-110", t(10, 30), t(12))
         ),
-        ClassDay.Thu to emptyList()
+        ClassDay.Thu to listOf(
+            RoutineSlot.Class(mat231, "Rm 2-405", t(8, 30), t(10)),
+            RoutineSlot.Class(cse231, "Rm 4-302", t(10, 30), t(11, 45)),
+            RoutineSlot.Class(cse232, "Lab 3 · Sec 2", t(12, 30), t(14, 30)),
+            RoutineSlot.Class(eng102, "Rm 2-105", t(14, 30), t(15, 45))
+        )
     )
 
     override fun routine(day: ClassDay): List<RoutineSlot> = routine[day].orEmpty()

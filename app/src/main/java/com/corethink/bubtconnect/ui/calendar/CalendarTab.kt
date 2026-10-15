@@ -2,7 +2,6 @@ package com.corethink.bubtconnect.ui.calendar
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,11 +17,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Payments
+import androidx.compose.material.icons.outlined.BeachAccess
+import androidx.compose.material.icons.outlined.EditNote
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -33,9 +36,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -43,10 +45,13 @@ import com.corethink.bubtconnect.data.model.CalendarEvent
 import com.corethink.bubtconnect.data.model.CalendarEventType
 import com.corethink.bubtconnect.data.model.SimpleDate
 import com.corethink.bubtconnect.data.repository.SampleAcademicsRepository
+import com.corethink.bubtconnect.ui.components.FilterPill
 import com.corethink.bubtconnect.ui.components.dashedBorder
 import com.corethink.bubtconnect.ui.design.BUBTConnectMaterial3Theme
 import com.corethink.bubtconnect.ui.design.BubtShapes
 import com.corethink.bubtconnect.ui.design.BubtSpacing
+import com.corethink.bubtconnect.ui.design.BubtSuccess
+import com.corethink.bubtconnect.ui.design.BubtWarning
 
 @Composable
 fun CalendarTab(
@@ -59,17 +64,19 @@ fun CalendarTab(
         state = state,
         onPreviousMonth = viewModel::previousMonth,
         onNextMonth = viewModel::nextMonth,
+        onSelectFilter = viewModel::selectFilter,
         onSeeExamRoutine = onSeeExamRoutine,
         onOpenFees = onOpenFees
     )
 }
 
-/** 1k · Academic calendar. Marker shape encodes type (square / circle / diamond) so it reads in grayscale. */
+/** 1l · Academic calendar. Filter chips, colored type icons, red Today line, past events at 60%. */
 @Composable
 fun CalendarContent(
     state: CalendarUiState,
     onPreviousMonth: () -> Unit,
     onNextMonth: () -> Unit,
+    onSelectFilter: (CalendarFilter) -> Unit,
     onSeeExamRoutine: () -> Unit,
     onOpenFees: () -> Unit
 ) {
@@ -81,7 +88,15 @@ fun CalendarContent(
         item {
             MonthHeader(label = state.monthLabel, onPrevious = onPreviousMonth, onNext = onNextMonth)
             Spacer(modifier = Modifier.height(BubtSpacing.Sm))
-            Legend()
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(BubtSpacing.Sm)) {
+                items(CalendarFilter.entries) { filter ->
+                    FilterPill(
+                        text = filter.label,
+                        selected = filter == state.filter,
+                        onClick = { onSelectFilter(filter) }
+                    )
+                }
+            }
             Spacer(modifier = Modifier.height(BubtSpacing.Lg))
         }
         if (state.events.isEmpty()) {
@@ -92,10 +107,10 @@ fun CalendarContent(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            if (todayIndex != null) item { TodayDivider() }
+            if (todayIndex != null) item { TodayDivider(state.today) }
         }
         state.events.forEachIndexed { index, event ->
-            if (index == todayIndex) item { TodayDivider() }
+            if (index == todayIndex) item { TodayDivider(state.today) }
             item {
                 EventRow(
                     event = event,
@@ -108,7 +123,7 @@ fun CalendarContent(
             }
         }
         if (todayIndex != null && todayIndex == state.events.size && state.events.isNotEmpty()) {
-            item { TodayDivider() }
+            item { TodayDivider(state.today) }
         }
     }
 }
@@ -146,60 +161,37 @@ private fun MonthArrow(onClick: () -> Unit, next: Boolean) {
     }
 }
 
+/** Payments amber, Exams blue, Holidays green. */
 @Composable
-private fun Legend() {
-    Row(horizontalArrangement = Arrangement.spacedBy(BubtSpacing.Lg)) {
-        CalendarEventType.entries.forEach { type ->
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                EventMarker(type = type, color = markerColor(type))
-                Spacer(modifier = Modifier.width(BubtSpacing.Xs + 2.dp))
-                Text(
-                    text = type.label,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun markerColor(type: CalendarEventType): Color = when (type) {
-    CalendarEventType.Payment -> MaterialTheme.colorScheme.error
+private fun typeColor(type: CalendarEventType): Color = when (type) {
+    CalendarEventType.Payment -> BubtWarning
     CalendarEventType.Exam -> MaterialTheme.colorScheme.primary
-    CalendarEventType.Holiday -> MaterialTheme.colorScheme.tertiary
+    CalendarEventType.Holiday -> BubtSuccess
 }
 
-/** Square = payment, circle = exam, diamond = holiday. */
-@Composable
-private fun EventMarker(type: CalendarEventType, color: Color, size: Dp = 12.dp) {
-    val background = MaterialTheme.colorScheme.surface
-    when (type) {
-        CalendarEventType.Payment -> Box(
-            Modifier
-                .size(size)
-                .background(background, RoundedCornerShape(2.dp))
-                .border(1.5.dp, color, RoundedCornerShape(2.dp))
-        )
-        CalendarEventType.Exam -> Box(
-            Modifier
-                .size(size)
-                .clip(CircleShape)
-                .background(background)
-                .border(1.5.dp, color, CircleShape)
-        )
-        CalendarEventType.Holiday -> Box(
-            Modifier
-                .size(size * 0.8f)
-                .graphicsLayer { rotationZ = 45f }
-                .background(background)
-                .border(1.5.dp, color)
-        )
+private fun typeIcon(type: CalendarEventType): ImageVector = when (type) {
+    CalendarEventType.Payment -> Icons.Filled.Payments
+    CalendarEventType.Exam -> Icons.Outlined.EditNote
+    CalendarEventType.Holiday -> Icons.Outlined.BeachAccess
+}
+
+/** "OCT 05 · PAID", "OCT 20 – 27 · EXAM", "OCT 31 · DEADLINE". */
+private fun badgeLabel(event: CalendarEvent): String {
+    val date = when (event.endDate) {
+        null -> event.date.shortLabel
+        else -> "${event.date.shortLabel} – ${event.endDate.day}"
     }
+    val badge = when (event.type) {
+        CalendarEventType.Payment ->
+            if (event.title.contains("clearance", ignoreCase = true)) "DEADLINE" else "PAID"
+        CalendarEventType.Exam -> "EXAM"
+        CalendarEventType.Holiday -> "HOLIDAY"
+    }
+    return "${date.uppercase()} · $badge"
 }
 
 @Composable
-private fun TodayDivider() {
+private fun TodayDivider(today: SimpleDate) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -207,16 +199,16 @@ private fun TodayDivider() {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            text = "Today",
+            text = "TODAY · ${today.shortLabel.uppercase()}",
             style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.width(56.dp)
+            color = MaterialTheme.colorScheme.error,
+            modifier = Modifier.width(120.dp)
         )
         Box(
             modifier = Modifier
                 .weight(1f)
                 .height(2.dp)
-                .dashedBorder(MaterialTheme.colorScheme.primary, 0.dp, width = 1.dp)
+                .dashedBorder(MaterialTheme.colorScheme.error, 0.dp, width = 1.dp)
         )
     }
 }
@@ -236,14 +228,6 @@ private fun EventRow(
             .fillMaxWidth()
             .height(IntrinsicSize.Min)
     ) {
-        Text(
-            text = event.date.shortLabel,
-            style = MaterialTheme.typography.labelMedium,
-            color = if (isPast) muted else MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier
-                .width(56.dp)
-                .padding(top = BubtSpacing.Lg)
-        )
         Box(
             modifier = Modifier
                 .width(20.dp)
@@ -259,8 +243,8 @@ private fun EventRow(
                         .background(MaterialTheme.colorScheme.outline)
                 )
             }
-            Box(modifier = Modifier.padding(top = 16.dp)) {
-                EventMarker(type = event.type, color = if (isPast) muted else markerColor(event.type))
+            Box(modifier = Modifier.padding(top = 12.dp)) {
+                EventIcon(event.type, muted = isPast)
             }
         }
         Box(
@@ -270,12 +254,39 @@ private fun EventRow(
         ) {
             if (isPast) {
                 Column(modifier = Modifier.padding(vertical = BubtSpacing.Md)) {
-                    Text(text = event.title, style = MaterialTheme.typography.titleSmall, color = muted)
-                    Text(text = "${event.note} · passed", style = MaterialTheme.typography.bodySmall, color = muted)
+                    Text(
+                        text = badgeLabel(event),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = muted
+                    )
+                    Text(
+                        text = event.title,
+                        style = MaterialTheme.typography.titleSmall,
+                        color = muted
+                    )
                 }
             } else {
                 EventCard(event = event, onSeeExamRoutine = onSeeExamRoutine, onOpenFees = onOpenFees)
             }
+        }
+    }
+}
+
+@Composable
+private fun EventIcon(type: CalendarEventType, muted: Boolean = false) {
+    val color = if (muted) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f) else typeColor(type)
+    Surface(
+        shape = CircleShape,
+        color = color.copy(alpha = 0.12f),
+        modifier = Modifier.size(28.dp)
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Icon(
+                imageVector = typeIcon(type),
+                contentDescription = type.label,
+                tint = color,
+                modifier = Modifier.size(16.dp)
+            )
         }
     }
 }
@@ -288,36 +299,45 @@ private fun EventCard(event: CalendarEvent, onSeeExamRoutine: () -> Unit, onOpen
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
     ) {
-        Column(modifier = Modifier.padding(horizontal = BubtSpacing.CardPadding, vertical = BubtSpacing.Md)) {
-            Text(
-                text = event.title,
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                text = event.endDate?.let { "${event.note} · ${event.date.shortLabel} – ${it.day}" } ?: event.note,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            val action = when (event.type) {
-                CalendarEventType.Exam -> "See routine" to onSeeExamRoutine
-                CalendarEventType.Payment -> "View fees" to onOpenFees
-                CalendarEventType.Holiday -> null
-            }
-            action?.let { (label, onClick) ->
-                Spacer(modifier = Modifier.height(BubtSpacing.Sm))
-                Surface(
-                    onClick = onClick,
-                    shape = BubtShapes.Chip,
-                    color = MaterialTheme.colorScheme.surface,
-                    contentColor = MaterialTheme.colorScheme.primary,
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
-                ) {
-                    Text(
-                        text = label,
-                        style = MaterialTheme.typography.labelMedium,
-                        modifier = Modifier.padding(horizontal = BubtSpacing.Md, vertical = BubtSpacing.Xs + 2.dp)
-                    )
+        Row(modifier = Modifier.padding(horizontal = BubtSpacing.CardPadding, vertical = BubtSpacing.Md)) {
+            EventIcon(type = event.type)
+            Spacer(modifier = Modifier.width(BubtSpacing.Md))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = badgeLabel(event),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = typeColor(event.type)
+                )
+                Text(
+                    text = event.title,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = event.endDate?.let { "${event.note} · ${event.date.shortLabel} – ${it.shortLabel}" } ?: event.note,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                val action = when (event.type) {
+                    CalendarEventType.Exam -> "See routine" to onSeeExamRoutine
+                    CalendarEventType.Payment -> "View fees" to onOpenFees
+                    CalendarEventType.Holiday -> null
+                }
+                action?.let { (label, onClick) ->
+                    Spacer(modifier = Modifier.height(BubtSpacing.Sm))
+                    Surface(
+                        onClick = onClick,
+                        shape = BubtShapes.Chip,
+                        color = MaterialTheme.colorScheme.surface,
+                        contentColor = MaterialTheme.colorScheme.primary,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+                    ) {
+                        Text(
+                            text = "$label →",
+                            style = MaterialTheme.typography.labelMedium,
+                            modifier = Modifier.padding(horizontal = BubtSpacing.Md, vertical = BubtSpacing.Xs + 2.dp)
+                        )
+                    }
                 }
             }
         }
@@ -327,7 +347,7 @@ private fun EventCard(event: CalendarEvent, onSeeExamRoutine: () -> Unit, onOpen
 @Preview(showBackground = true, heightDp = 750)
 @Composable
 private fun CalendarContentPreview() {
-    val today = SimpleDate(2026, 10, 14)
+    val today = SimpleDate(2026, 10, 11)
     BUBTConnectMaterial3Theme {
         Surface(color = MaterialTheme.colorScheme.background) {
             CalendarContent(
@@ -335,10 +355,11 @@ private fun CalendarContentPreview() {
                     year = 2026,
                     month = 10,
                     today = today,
-                    events = SampleAcademicsRepository.calendarEvents().filter { it.date.month == 10 }
+                    allEvents = SampleAcademicsRepository.calendarEvents().filter { it.date.month == 10 }
                 ),
                 onPreviousMonth = {},
                 onNextMonth = {},
+                onSelectFilter = {},
                 onSeeExamRoutine = {},
                 onOpenFees = {}
             )

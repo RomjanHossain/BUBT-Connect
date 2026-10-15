@@ -18,12 +18,14 @@ enum class CourseFilter(val label: String) { All("All"), Completed("Completed"),
 data class CoursesUiState(
     val query: String = "",
     val filter: CourseFilter = CourseFilter.All,
-    val isConnected: Boolean = false,
     val department: String = "CSE",
     val courses: List<CurriculumCourse> = emptyList(),
     val completedCount: Int = 0,
     val totalCount: Int = 0
-)
+) {
+    val progressPercent: Int
+        get() = if (totalCount == 0) 0 else completedCount * 100 / totalCount
+}
 
 class CoursesViewModel(
     repository: AcademicsRepository = SampleAcademicsRepository,
@@ -37,24 +39,24 @@ class CoursesViewModel(
     val uiState: StateFlow<CoursesUiState> = combine(
         query,
         filter,
-        profileRepository.annexConnected,
         profileRepository.profile
-    ) { query, filter, connected, profile ->
-        // Completion is only known once Annex is connected, so guests always see the full list.
-        val effectiveFilter = if (connected) filter else CourseFilter.All
+    ) { query, filter, profile ->
         CoursesUiState(
             query = query,
-            filter = effectiveFilter,
-            isConnected = connected,
+            filter = filter,
             department = profile?.department ?: "CSE",
-            courses = filterCourses(curriculum, query, effectiveFilter),
+            courses = filterCourses(curriculum, query, filter),
             completedCount = curriculum.count { it.status == CourseStatus.Completed },
             totalCount = curriculum.size
         )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
-        initialValue = CoursesUiState(courses = curriculum, totalCount = curriculum.size)
+        initialValue = CoursesUiState(
+            courses = curriculum,
+            completedCount = curriculum.count { it.status == CourseStatus.Completed },
+            totalCount = curriculum.size
+        )
     )
 
     fun onQueryChange(value: String) {

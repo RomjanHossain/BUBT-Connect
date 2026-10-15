@@ -16,7 +16,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Cancel
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.PriorityHigh
 import androidx.compose.material3.CircularProgressIndicator
@@ -30,6 +29,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
@@ -38,7 +38,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.corethink.bubtconnect.data.model.AttendanceRecord
 import com.corethink.bubtconnect.data.repository.SampleAcademicsRepository
-import com.corethink.bubtconnect.ui.components.LockedFeature
 import com.corethink.bubtconnect.ui.components.dashedBorder
 import com.corethink.bubtconnect.ui.components.rememberSyncedLabel
 import com.corethink.bubtconnect.ui.design.BUBTConnectMaterial3Theme
@@ -49,16 +48,8 @@ import com.corethink.bubtconnect.ui.design.BubtSuccess
 import com.corethink.bubtconnect.ui.design.BubtWarning
 
 @Composable
-fun AttendanceTab(onConnectAnnex: () -> Unit, viewModel: AttendanceViewModel = viewModel()) {
+fun AttendanceTab(viewModel: AttendanceViewModel = viewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    if (!state.isConnected) {
-        LockedFeature(
-            title = "Attendance",
-            message = "Connect your Annex account to track attendance for every course.",
-            onConnect = onConnectAnnex
-        )
-        return
-    }
     AttendanceContent(
         state = state,
         onRefresh = viewModel::refresh,
@@ -67,7 +58,7 @@ fun AttendanceTab(onConnectAnnex: () -> Unit, viewModel: AttendanceViewModel = v
     )
 }
 
-/** 1j · Attendance. Below 75% = dashed card + "At risk" chip. Tap a card for the date-wise log. */
+/** 1k · Attendance. Overall ring + per-course rings. ≥75% green, 60–74% amber, under 60% red. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AttendanceContent(
@@ -76,6 +67,13 @@ fun AttendanceContent(
     onOpenLog: (AttendanceRecord) -> Unit,
     onCloseLog: () -> Unit
 ) {
+    val overallPercent = remember(state.records) {
+        val attended = state.records.sumOf { it.attended }
+        val total = state.records.sumOf { it.total }
+        if (total == 0) 100 else attended * 100 / total
+    }
+    val belowCount = remember(state.records) { state.records.count { it.atRisk } }
+
     PullToRefreshBox(
         isRefreshing = state.isRefreshing,
         onRefresh = onRefresh,
@@ -87,18 +85,14 @@ fun AttendanceContent(
             verticalArrangement = Arrangement.spacedBy(BubtSpacing.Md)
         ) {
             item {
-                Text(
-                    text = "Minimum ${AttendanceRecord.MIN_ATTENDANCE_PERCENT}% needed to sit for finals.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                OverallSummary(percent = overallPercent, belowCount = belowCount)
             }
             items(state.records, key = { it.course.code }) { record ->
                 AttendanceCard(record = record, onClick = { onOpenLog(record) })
             }
             item {
                 Text(
-                    text = "${rememberSyncedLabel(state.lastSyncedAt)} · pull to refresh",
+                    text = "Minimum ${AttendanceRecord.MIN_ATTENDANCE_PERCENT}% needed to sit for finals · ${rememberSyncedLabel(state.lastSyncedAt)}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -113,13 +107,66 @@ fun AttendanceContent(
     }
 }
 
+/** Ring colour shared by the overall and per-course rings. */
+@Composable
+private fun ringColorFor(percent: Int) = when {
+    percent < 60 -> BubtError
+    percent < AttendanceRecord.MIN_ATTENDANCE_PERCENT -> BubtWarning
+    else -> BubtSuccess
+}
+
+@Composable
+private fun OverallSummary(percent: Int, belowCount: Int) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = BubtShapes.Card,
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+    ) {
+        Row(
+            modifier = Modifier.padding(BubtSpacing.CardPadding),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(
+                    progress = { percent / 100f },
+                    modifier = Modifier.size(72.dp),
+                    color = ringColorFor(percent),
+                    trackColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    strokeWidth = 7.dp
+                )
+                Text(
+                    text = "$percent%",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+            Spacer(modifier = Modifier.width(BubtSpacing.Lg))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = if (belowCount == 0) "You're on track" else "Almost on track",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = if (belowCount == 0) {
+                        "Every course meets the ${AttendanceRecord.MIN_ATTENDANCE_PERCENT}% exam requirement."
+                    } else if (belowCount == 1) {
+                        "1 course is below the ${AttendanceRecord.MIN_ATTENDANCE_PERCENT}% exam requirement."
+                    } else {
+                        "$belowCount courses are below the ${AttendanceRecord.MIN_ATTENDANCE_PERCENT}% exam requirement."
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (belowCount == 0) MaterialTheme.colorScheme.onSurfaceVariant else BubtError
+                )
+            }
+        }
+    }
+}
+
 @Composable
 private fun AttendanceCard(record: AttendanceRecord, onClick: () -> Unit) {
-    val ringColor = when {
-        record.atRisk -> BubtError
-        record.percent < 80 -> BubtWarning
-        else -> BubtSuccess
-    }
+    val ringColor = ringColorFor(record.percent)
     Surface(
         onClick = onClick,
         modifier = Modifier
@@ -151,18 +198,23 @@ private fun AttendanceCard(record: AttendanceRecord, onClick: () -> Unit) {
             Spacer(modifier = Modifier.width(BubtSpacing.Lg))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = record.course.code,
+                    text = record.course.title,
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = buildString {
-                        append("${record.attended} / ${record.total} ${record.unit}")
-                        if (record.atRisk) append(" · need ${record.classesNeeded} more")
-                    },
+                    text = "${record.course.code} · ${record.attended} of ${record.total} ${record.unit}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                if (record.atRisk) {
+                    Text(
+                        text = "Attend the next ${record.classesNeeded} ${record.unit} to reach ${AttendanceRecord.MIN_ATTENDANCE_PERCENT}%",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = BubtError,
+                        modifier = Modifier.padding(top = 2.dp)
+                    )
+                }
             }
             if (record.atRisk) {
                 Surface(
@@ -180,9 +232,9 @@ private fun AttendanceCard(record: AttendanceRecord, onClick: () -> Unit) {
                 }
             } else {
                 Icon(
-                    imageVector = Icons.Filled.Check,
+                    imageVector = Icons.Filled.CheckCircle,
                     contentDescription = "On track",
-                    tint = BubtSuccess
+                    tint = ringColor
                 )
             }
         }
