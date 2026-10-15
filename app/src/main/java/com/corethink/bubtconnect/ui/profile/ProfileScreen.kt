@@ -19,10 +19,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Logout
-import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.outlined.Sync
-import androidx.compose.material.icons.outlined.Payments
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.outlined.Alarm
+import androidx.compose.material.icons.outlined.EditNote
+import androidx.compose.material.icons.outlined.Payments
+import androidx.compose.material.icons.outlined.Sync
+import androidx.compose.material.icons.outlined.Verified
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -43,6 +45,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -95,7 +98,7 @@ fun ProfileRoute(
     )
 }
 
-/** 1s · Profile. Guest version swaps the status card for the Connect CTA from 1d. */
+/** 1u · Profile. Guest version swaps the status card for the Connect CTA from 1e. */
 @Composable
 fun ProfileScreen(
     state: ProfileUiState,
@@ -164,7 +167,7 @@ fun ProfileScreen(
         )
         Spacer(modifier = Modifier.height(BubtSpacing.Xl))
 
-        SectionLabel("Appearance")
+        SectionLabel("APPEARANCE")
         ThemeModeSelector(selected = state.settings.themeMode, onSelect = onThemeModeChange)
         Spacer(modifier = Modifier.height(BubtSpacing.Xl))
 
@@ -241,11 +244,11 @@ private fun AnnexStatusCard(lastSyncedAt: Long?, isSyncing: Boolean, onSync: () 
             modifier = Modifier.padding(BubtSpacing.CardPadding),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(
-                modifier = Modifier
-                    .size(10.dp)
-                    .clip(CircleShape)
-                    .background(BubtSuccess)
+            Icon(
+                imageVector = Icons.Outlined.Verified,
+                contentDescription = null,
+                tint = BubtSuccess,
+                modifier = Modifier.size(20.dp)
             )
             Spacer(modifier = Modifier.width(BubtSpacing.Md))
             Column(modifier = Modifier.weight(1f)) {
@@ -326,32 +329,38 @@ private fun NotificationSettings(
     onExamRemindersChange: (Boolean) -> Unit,
     onPaymentDeadlinesChange: (Boolean) -> Unit
 ) {
-    SectionLabel("Notifications")
-    SettingRow(label = "Class reminder") {
+    SectionLabel("NOTIFICATIONS")
+    SettingRow(label = "Class reminder", icon = Icons.Outlined.Alarm) {
         ClassReminderDropdown(
             minutes = settings.classReminderMinutes,
             onSelect = onClassReminderChange
         )
     }
     HorizontalDivider(color = MaterialTheme.colorScheme.outline)
-    SettingRow(label = "Exam reminders") {
+    SettingRow(label = "Exam reminders", icon = Icons.Outlined.EditNote) {
         Switch(checked = settings.examReminders, onCheckedChange = onExamRemindersChange)
     }
     HorizontalDivider(color = MaterialTheme.colorScheme.outline)
-    SettingRow(label = "Payment deadlines") {
+    SettingRow(label = "Payment deadlines", icon = Icons.Outlined.Payments) {
         Switch(checked = settings.paymentDeadlines, onCheckedChange = onPaymentDeadlinesChange)
     }
     HorizontalDivider(color = MaterialTheme.colorScheme.outline)
 }
 
 @Composable
-private fun SettingRow(label: String, control: @Composable () -> Unit) {
+private fun SettingRow(label: String, icon: ImageVector, control: @Composable () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = 56.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.width(BubtSpacing.Md))
         Text(
             text = label,
             style = MaterialTheme.typography.bodyLarge,
@@ -373,7 +382,7 @@ private fun ClassReminderDropdown(minutes: Int, onSelect: (Int) -> Unit) {
                 color = MaterialTheme.colorScheme.onSurface
             )
             Icon(
-                imageVector = Icons.Filled.ArrowDropDown,
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
