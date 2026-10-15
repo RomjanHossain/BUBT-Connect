@@ -166,9 +166,9 @@ internal fun WizardFrame(
     }
 }
 
-// ------------------------------------------------------------- 1m · select template
+// ------------------------------------------------------------- 1o · select template
 
-/** 1m · Choose a cover template. Long-press a tile to preview the full cover. */
+/** 1o · Choose a cover template. Long-press a tile to preview the full cover. */
 @Composable
 fun TemplateStep(
     state: ScannerUiState,
@@ -181,16 +181,22 @@ fun TemplateStep(
         header = { WizardTopBar("New document", step = 1, leading = WizardLeading.Close, onLeading = onClose) },
         bottom = {
             BubtPrimaryButton(
-                text = if (state.template.hasCover) "Next: Fill details" else "Next: Add pages",
+                text = "Continue",
                 onClick = onNext,
                 modifier = Modifier.fillMaxWidth()
             )
         }
     ) {
         Text(
-            text = "Choose a cover template",
+            text = "Choose a cover",
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.padding(bottom = BubtSpacing.Xs)
+        )
+        Text(
+            text = "We'll fill it with your details next.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(bottom = BubtSpacing.Md)
         )
         Column(verticalArrangement = Arrangement.spacedBy(BubtSpacing.Md)) {
@@ -292,9 +298,9 @@ private fun TemplateTile(
     }
 }
 
-// ------------------------------------------------------------- 1n · details + live preview
+// ------------------------------------------------------------- 1p · details + live preview
 
-/** 1n · Cover details. The preview redraws as you type; tap it to view full-size. */
+/** 1p · Cover details. The preview redraws as you type; tap it to view full-size. */
 @Composable
 fun DetailsStep(
     state: ScannerUiState,
@@ -316,7 +322,7 @@ fun DetailsStep(
         },
         bottom = {
             BubtPrimaryButton(
-                text = "Next: Add pages",
+                text = "Continue to scan",
                 onClick = onNext,
                 enabled = state.canContinueDetails,
                 modifier = Modifier.fillMaxWidth()

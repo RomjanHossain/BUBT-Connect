@@ -60,7 +60,7 @@ import kotlin.math.roundToInt
 
 private const val GridColumns = 3
 
-/** 1p · Review + merge. The cover (from 1n) is pinned as page 1; long-press and drag the rest to reorder. */
+/** 1r · Review + merge. The cover (from 1p) is pinned as page 1; long-press and drag the rest to reorder. */
 @Composable
 fun ReviewStep(
     state: ScannerUiState,
@@ -76,11 +76,12 @@ fun ReviewStep(
     onFileNameChange: (String) -> Unit,
     onMerge: () -> Unit
 ) {
+    val totalPages = state.pages.size + if (state.template.hasCover) 1 else 0
     WizardFrame(
         header = { WizardTopBar("Review pages", step = 3, leading = WizardLeading.Back, onLeading = onBack) },
         bottom = {
             BubtPrimaryButton(
-                text = if (state.isMerging) "Merging…" else "Merge into PDF",
+                text = if (state.isMerging) "Merging…" else "Merge $totalPages page${if (totalPages == 1) "" else "s"}",
                 onClick = onMerge,
                 enabled = state.canMerge,
                 loading = state.isMerging,
@@ -89,7 +90,7 @@ fun ReviewStep(
         }
     ) {
         Text(
-            text = "Long-press and drag to reorder · tap a page to edit",
+            text = "Long-press and drag to reorder. Tap a page to edit.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(bottom = BubtSpacing.Md)
@@ -172,7 +173,7 @@ private fun PageGrid(
                 ) {
                     row.forEach { cell ->
                         when (cell) {
-                            GridCell.Cover -> GridSlot(cellWidth, labelHeight, label = "1") {
+                            GridCell.Cover -> GridSlot(cellWidth, labelHeight, label = "1 · COVER") {
                                 CoverTile(state, tileHeight, onEditCover)
                             }
                             is GridCell.Page -> {
@@ -276,20 +277,6 @@ private fun CoverTile(state: ScannerUiState, height: Dp, onClick: () -> Unit) {
                 .fillMaxWidth()
                 .wrapContentHeight(Alignment.Top, unbounded = true)
         )
-        Surface(
-            shape = BubtShapes.Chip,
-            color = MaterialTheme.colorScheme.primary,
-            contentColor = MaterialTheme.colorScheme.onPrimary,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = BubtSpacing.Sm)
-        ) {
-            Text(
-                text = "Cover",
-                style = MaterialTheme.typography.labelSmall,
-                modifier = Modifier.padding(horizontal = BubtSpacing.Sm, vertical = 2.dp)
-            )
-        }
     }
 }
 

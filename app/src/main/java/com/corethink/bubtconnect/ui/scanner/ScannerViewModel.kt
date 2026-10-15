@@ -26,7 +26,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-/** 1m → 1n → 1o → 1p → 1q. Capture and Review are both "Step 3 of 4". */
+/** 1o → 1p → 1q → 1r → 1s. Capture and Review are both "Step 3 of 4". */
 enum class ScannerStep(val number: Int) { Template(1), Details(2), Capture(3), Review(3), Success(4) }
 
 data class ScanResult(val file: File, val pageCount: Int, val sizeBytes: Long)
@@ -111,13 +111,13 @@ class ScannerViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    // ------------------------------------------------------------- 1m · template
+    // ------------------------------------------------------------- 1o · template
 
     fun selectTemplate(template: CoverTemplate) {
         _uiState.update { it.copy(template = template) }
     }
 
-    // ------------------------------------------------------------- 1n · details
+    // ------------------------------------------------------------- 1p · details
 
     fun onCourseCodeChange(value: String) {
         _uiState.update { state ->
@@ -133,7 +133,7 @@ class ScannerViewModel(application: Application) : AndroidViewModel(application)
         _uiState.update { it.copy(details = it.details.copy(submittedBy = value), submittedByIsAuto = false) }
     }
 
-    // ------------------------------------------------------------- 1o · capture
+    // ------------------------------------------------------------- 1q · capture
 
     /** Destination for the next camera shot; added as a page once CameraX has written it. */
     fun newCaptureFile(): File = File(scanDir, "pages/${System.currentTimeMillis()}.jpg").apply { parentFile?.mkdirs() }
@@ -145,7 +145,7 @@ class ScannerViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    // ------------------------------------------------------------- 1p · review
+    // ------------------------------------------------------------- 1r · review
 
     fun selectPage(id: Long) {
         _uiState.update { it.copy(selectedPageId = if (it.selectedPageId == id) null else id) }
@@ -204,7 +204,7 @@ class ScannerViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    // ------------------------------------------------------------- 1q · success
+    // ------------------------------------------------------------- 1s · success
 
     /** Copies the PDF to a location the user picked through the system "Save as" sheet. */
     fun saveCopy(target: Uri, onDone: (Boolean) -> Unit) {

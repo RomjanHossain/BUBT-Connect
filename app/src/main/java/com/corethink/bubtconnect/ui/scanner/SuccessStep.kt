@@ -85,7 +85,7 @@ fun SuccessRoute(state: ScannerUiState, viewModel: ScannerViewModel, onFinished:
     )
 }
 
-/** 1q · PDF ready. Turning "Publish" off hides tags + anonymous row and the primary becomes "Done". */
+/** 1s · PDF ready. Turning "Publish" off hides tags + anonymous row and the primary becomes "Done". */
 @Composable
 fun SuccessStep(
     state: ScannerUiState,
@@ -98,10 +98,10 @@ fun SuccessStep(
     onDone: () -> Unit
 ) {
     WizardFrame(
-        header = { WizardTopBar("PDF ready", step = 4, leading = WizardLeading.None, onLeading = {}) },
+        header = { WizardTopBar("", step = 4, leading = WizardLeading.Close, onLeading = onDone) },
         bottom = {
             BubtPrimaryButton(
-                text = if (state.publishToCommunity) "Publish & Done" else "Done",
+                text = if (state.publishToCommunity) "Publish & finish" else "Done",
                 onClick = onDone,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -123,6 +123,12 @@ fun SuccessStep(
                 modifier = Modifier.size(36.dp)
             )
         }
+        Text(
+            text = "Your PDF is ready",
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.align(Alignment.CenterHorizontally)
+        )
         Spacer(modifier = Modifier.height(BubtSpacing.Md))
 
         state.result?.let { result ->
@@ -166,7 +172,7 @@ fun SuccessStep(
         Spacer(modifier = Modifier.height(BubtSpacing.Md))
         Row(horizontalArrangement = Arrangement.spacedBy(BubtSpacing.Md)) {
             BubtOutlinedButton(
-                text = "Save to Device",
+                text = "Save",
                 onClick = onSave,
                 leadingIcon = Icons.Outlined.FileDownload,
                 modifier = Modifier.weight(1f)
@@ -216,7 +222,7 @@ private fun PublishCard(
             }
             if (state.publishToCommunity) {
                 Text(
-                    text = "Tags help classmates find it",
+                    text = "Help classmates find good references",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = BubtSpacing.Xs, bottom = BubtSpacing.Sm)
@@ -291,7 +297,7 @@ private fun TagInput(tags: List<String>, onAddTag: (String) -> Unit, onRemoveTag
         Box {
             if (draft.isEmpty()) {
                 Text(
-                    text = "add tag…",
+                    text = "Add tag…",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

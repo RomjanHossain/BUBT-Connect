@@ -37,6 +37,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.outlined.FlashAuto
 import androidx.compose.material.icons.outlined.FlashOff
 import androidx.compose.material.icons.outlined.FlashOn
 import androidx.compose.material.icons.outlined.NoPhotography
@@ -78,7 +79,7 @@ import com.corethink.bubtconnect.ui.design.BubtShapes
 import com.corethink.bubtconnect.ui.design.BubtSpacing
 import java.io.File
 
-private enum class CaptureMode(val label: String) { Camera("Camera"), Gallery("Gallery") }
+private enum class CaptureMode(val label: String) { Camera("Camera"), Gallery("Gallery"), Auto("Auto") }
 
 // The capture screen stays dark in both themes, like a camera app.
 private val CaptureBackground = Color(0xFF141416)
@@ -88,7 +89,7 @@ private val CaptureMuted = Color(0xFFB5B4BC)
 
 private const val MAX_GALLERY_PICKS = 30
 
-/** 1o · Capture / Upload. Left: last shot (tap to import from gallery). Right: page stack → review. */
+/** 1q · Capture / Upload. Left: last shot (tap to import from gallery). Right: page stack → review. */
 @Composable
 fun CaptureStep(
     state: ScannerUiState,
@@ -127,7 +128,7 @@ fun CaptureStep(
     LaunchedEffect(flashOn) {
         imageCapture.flashMode = if (flashOn) ImageCapture.FLASH_MODE_ON else ImageCapture.FLASH_MODE_OFF
     }
-    val cameraReady = mode == CaptureMode.Camera && hasPermission
+    val cameraReady = mode != CaptureMode.Gallery && hasPermission
 
     fun capture() {
         if (capturing) return
@@ -167,13 +168,17 @@ fun CaptureStep(
             DarkIconButton(Icons.Filled.Close, contentDescription = "Close", onClick = onClose)
             Spacer(modifier = Modifier.width(BubtSpacing.Md))
             Text(
-                text = "Step 3 of $ScannerTotalSteps",
+                text = "Step 3 of $ScannerTotalSteps · Page ${state.pages.size + 1}",
                 style = MaterialTheme.typography.titleMedium,
                 color = CaptureContent,
                 modifier = Modifier.weight(1f)
             )
             DarkIconButton(
-                icon = if (flashOn) Icons.Outlined.FlashOn else Icons.Outlined.FlashOff,
+                icon = when {
+                    mode == CaptureMode.Auto -> Icons.Outlined.FlashAuto
+                    flashOn -> Icons.Outlined.FlashOn
+                    else -> Icons.Outlined.FlashOff
+                },
                 contentDescription = if (flashOn) "Turn flash off" else "Turn flash on",
                 onClick = { flashOn = !flashOn },
                 enabled = cameraReady
@@ -217,7 +222,7 @@ fun CaptureStep(
                             .padding(bottom = BubtSpacing.Xl + BubtSpacing.Lg)
                     ) {
                         Text(
-                            text = "Fit the page inside the frame",
+                            text = if (mode == CaptureMode.Auto) "Edges found · hold steady" else "Fit the page inside the frame",
                             style = MaterialTheme.typography.labelMedium,
                             modifier = Modifier.padding(horizontal = BubtSpacing.Md, vertical = BubtSpacing.Xs + 2.dp)
                         )
