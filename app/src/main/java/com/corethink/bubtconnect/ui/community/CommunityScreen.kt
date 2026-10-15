@@ -1,6 +1,5 @@
 package com.corethink.bubtconnect.ui.community
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
@@ -30,7 +29,7 @@ import androidx.compose.material.icons.outlined.IosShare
 import androidx.compose.material.icons.outlined.PictureAsPdf
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.VisibilityOff
-import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -178,23 +177,22 @@ fun CommunityScreen(
                 )
             }
         }
-        FloatingActionButton(
+        ExtendedFloatingActionButton(
             onClick = onShare,
+            expanded = fabExpanded,
             containerColor = MaterialTheme.colorScheme.primaryContainer,
             contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            icon = { Icon(imageVector = Icons.Outlined.IosShare, contentDescription = "Share") },
+            text = {
+                Text(
+                    text = "Share",
+                    style = MaterialTheme.typography.labelLarge
+                )
+            },
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(BubtSpacing.Screen)
-        ) {
-            Icon(imageVector = Icons.Outlined.IosShare, contentDescription = "Share")
-            AnimatedVisibility(visible = fabExpanded) {
-                Text(
-                    text = "Share",
-                    style = MaterialTheme.typography.labelLarge,
-                    modifier = Modifier.padding(start = BubtSpacing.Sm)
-                )
-            }
-        }
+        )
     }
 }
 
