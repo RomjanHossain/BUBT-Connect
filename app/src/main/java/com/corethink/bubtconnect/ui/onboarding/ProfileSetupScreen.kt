@@ -76,12 +76,12 @@ fun ProfileSetupScreen(
                 .padding(horizontal = BubtSpacing.Screen)
         ) {
             OnboardingTopBar(
-                title = if (isEditing) "Edit profile" else "Set up profile",
+                title = if (isEditing) "Edit profile" else "Let's set up your profile",
                 onBack = onBack,
                 trailing = {
                     if (!isEditing) {
                         Text(
-                            text = "1 of 2",
+                            text = "Step 1 of 2",
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -101,15 +101,16 @@ fun ProfileSetupScreen(
                 verticalArrangement = Arrangement.spacedBy(BubtSpacing.Lg)
             ) {
                 Text(
-                    text = if (isEditing) "Update your basic details." else "Tell us a bit about you. No login needed.",
+                    text = if (isEditing) "Update your basic details." else "No account needed. You can connect Annex later.",
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 BubtTextField(
                     value = state.roll,
                     onValueChange = onRollChange,
-                    label = "Roll Number",
+                    label = "Roll number",
                     placeholder = "e.g. 22235103045",
+                    error = state.rollError,
                     keyboardType = KeyboardType.Number
                 )
                 BubtDropdownField(
@@ -117,20 +118,22 @@ fun ProfileSetupScreen(
                     label = "Department",
                     placeholder = "Select department",
                     options = BubtDepartments,
-                    onSelect = onDepartmentChange
+                    onSelect = onDepartmentChange,
+                    error = state.departmentError
                 )
                 BubtDropdownField(
                     value = state.semester,
-                    label = "Current Semester",
+                    label = "Current semester",
                     placeholder = "Select semester",
                     options = BubtSemesters,
-                    onSelect = onSemesterChange
+                    onSelect = onSemesterChange,
+                    error = state.semesterError
                 )
                 BubtTextField(
                     value = state.name,
                     onValueChange = onNameChange,
                     label = "Name (optional)",
-                    placeholder = "Your name"
+                    placeholder = "e.g. Rafi Ahmed"
                 )
             }
 
@@ -143,7 +146,6 @@ fun ProfileSetupScreen(
                 BubtPrimaryButton(
                     text = if (isEditing) "Save" else "Continue",
                     onClick = onContinue,
-                    enabled = state.canContinue,
                     modifier = Modifier.fillMaxWidth()
                 )
                 if (!isEditing) {

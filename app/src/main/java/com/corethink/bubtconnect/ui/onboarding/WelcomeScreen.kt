@@ -52,7 +52,11 @@ private data class WelcomeSlide(
 )
 
 private val slides = listOf(
-    WelcomeSlide(null, "Scan, routines, results and notes —\nyour campus in one app.", null),
+    WelcomeSlide(
+        "BUBT Companion",
+        "Your whole campus, in one pocket.\nScan assignments with cover pages, track your routine, check results and share notes.",
+        null
+    ),
     WelcomeSlide("Never miss a class", "Your routine, exams and calendar\nsynced in one place.", Icons.Outlined.CalendarMonth),
     WelcomeSlide("Scan & share", "Scan notices and notes, then share\nthem with your section.", Icons.Outlined.QrCodeScanner)
 )
@@ -92,7 +96,7 @@ fun WelcomeScreen(
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(modifier = Modifier.height(BubtSpacing.Sm))
-            BubtTextButton(text = "Have an Annex account? Log in", onClick = onAnnexLogin)
+            BubtTextButton(text = "I have an Annex account", onClick = onAnnexLogin)
         }
     }
 }

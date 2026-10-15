@@ -118,7 +118,8 @@ fun BubtDropdownField(
     placeholder: String,
     options: List<String>,
     onSelect: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    error: String? = null
 ) {
     var expanded by remember { mutableStateOf(false) }
     Box(modifier = modifier.fillMaxWidth()) {
@@ -127,6 +128,7 @@ fun BubtDropdownField(
             onValueChange = {},
             label = label,
             placeholder = placeholder,
+            error = error,
             readOnly = true,
             trailingIcon = { Icon(Icons.Filled.ArrowDropDown, contentDescription = null) }
         )

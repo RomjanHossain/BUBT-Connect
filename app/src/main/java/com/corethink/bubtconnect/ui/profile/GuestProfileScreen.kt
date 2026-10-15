@@ -21,6 +21,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Link
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.Icon
@@ -46,6 +47,7 @@ import com.corethink.bubtconnect.ui.design.BUBTConnectMaterial3Theme
 import com.corethink.bubtconnect.ui.design.BubtCard
 import com.corethink.bubtconnect.ui.design.BubtCardStyle
 import com.corethink.bubtconnect.ui.design.BubtChip
+import com.corethink.bubtconnect.ui.design.BubtChipStyle
 import com.corethink.bubtconnect.ui.design.BubtFieldState
 import com.corethink.bubtconnect.ui.design.BubtPrimaryButton
 import com.corethink.bubtconnect.ui.design.BubtShapes
@@ -102,8 +104,8 @@ fun GuestProfileScreen(
                 .verticalScroll(rememberScrollState())
         ) {
             OnboardingTopBar(
-                title = "Your profile",
-                trailing = { BubtChip(text = "Guest") }
+                title = "Profile",
+                trailing = { BubtChip(text = "Guest mode", style = BubtChipStyle.Normal) }
             )
             Spacer(modifier = Modifier.height(BubtSpacing.Sm))
             StepProgress(totalSteps = 2, completedSteps = 2)
@@ -125,7 +127,7 @@ fun GuestProfileScreen(
             )
 
             BubtTextButton(
-                text = "Maybe later — go to Home",
+                text = "Maybe later",
                 onClick = onMaybeLater,
                 modifier = Modifier
                     .align(Alignment.CenterHorizontally)
@@ -160,7 +162,7 @@ private fun ProfileHeader(name: String) {
                 color = MaterialTheme.colorScheme.onSurface
             )
             Text(
-                text = "Not connected",
+                text = "Guest · data stored on this device",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -215,7 +217,7 @@ private fun ProfileSummaryCard(profile: StudentProfile, onEditProfile: () -> Uni
 
 @Composable
 private fun SummaryRow(label: String, value: String) {
-    Row(modifier = Modifier.fillMaxWidth()) {
+    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Text(
             text = label,
             style = MaterialTheme.typography.bodyMedium,
@@ -227,10 +229,17 @@ private fun SummaryRow(label: String, value: String) {
             style = MaterialTheme.typography.titleSmall,
             color = MaterialTheme.colorScheme.onSurface
         )
+        Spacer(modifier = Modifier.width(BubtSpacing.Sm))
+        Icon(
+            imageVector = Icons.Outlined.Lock,
+            contentDescription = "Locked",
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(14.dp)
+        )
     }
 }
 
-/** Inline Annex auth card — shared by 1d and the guest Profile (1s). */
+/** Inline Annex auth card — shared by 1d and the guest Profile (1s). The only filled-primary surface on the screen. */
 @Composable
 fun ConnectAnnexCard(
     state: AnnexLoginUiState,
@@ -239,18 +248,32 @@ fun ConnectAnnexCard(
     onConnect: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    BubtCard(modifier = modifier, style = BubtCardStyle.Outlined) {
-        Text(
-            text = "Connect Annex Account",
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurface
-        )
+    BubtCard(modifier = modifier, style = BubtCardStyle.Filled) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                imageVector = Icons.Outlined.Link,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+            Spacer(modifier = Modifier.width(BubtSpacing.Sm))
+            Text(
+                text = "Connect your Annex account",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+        }
         Spacer(modifier = Modifier.height(BubtSpacing.Xs))
         Text(
-            text = "Unlock Attendance, Results & Class Routine.",
+            text = "Use your BUBT Annex ID and password to unlock:",
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onPrimaryContainer
         )
+        Spacer(modifier = Modifier.height(BubtSpacing.Md))
+        Row(horizontalArrangement = Arrangement.spacedBy(BubtSpacing.Sm)) {
+            BubtChip(text = "Attendance", style = BubtChipStyle.Normal)
+            BubtChip(text = "Results", style = BubtChipStyle.Normal)
+            BubtChip(text = "Class routine", style = BubtChipStyle.Normal)
+        }
         Spacer(modifier = Modifier.height(BubtSpacing.Lg))
         BubtTextField(
             value = state.studentId,
@@ -273,7 +296,7 @@ fun ConnectAnnexCard(
         }
         Spacer(modifier = Modifier.height(BubtSpacing.Lg))
         BubtPrimaryButton(
-            text = if (state.isLoading) "Connecting…" else "Connect",
+            text = if (state.isLoading) "Connecting…" else "Connect Annex",
             onClick = onConnect,
             enabled = state.canSubmit,
             loading = state.isLoading,

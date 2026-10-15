@@ -12,11 +12,25 @@ data class ProfileSetupUiState(
     val roll: String = "",
     val department: String = "",
     val semester: String = "",
-    val name: String = ""
+    val name: String = "",
+    /** Set when Continue is tapped with invalid fields (spec 1d error state). */
+    val showErrors: Boolean = false
 ) {
-    /** Continue stays disabled until Roll + Dept + Semester are set. */
     val canContinue: Boolean
         get() = roll.isNotBlank() && department.isNotBlank() && semester.isNotBlank()
+
+    val rollError: String?
+        get() = if (showErrors && roll.length != ROLL_LENGTH) "Must be $ROLL_LENGTH digits" else null
+
+    val departmentError: String?
+        get() = if (showErrors && department.isBlank()) "Please select your department" else null
+
+    val semesterError: String?
+        get() = if (showErrors && semester.isBlank()) "Please select your current semester" else null
+
+    private companion object {
+        const val ROLL_LENGTH = 11
+    }
 }
 
 class ProfileSetupViewModel(
@@ -31,19 +45,22 @@ class ProfileSetupViewModel(
     val uiState: StateFlow<ProfileSetupUiState> = _uiState.asStateFlow()
 
     fun onRollChange(value: String) {
-        _uiState.update { it.copy(roll = value.filter(Char::isDigit).take(MAX_ROLL_LENGTH)) }
+        _uiState.update { it.copy(roll = value.filter(Char::isDigit).take(MAX_ROLL_LENGTH), showErrors = false) }
     }
 
-    fun onDepartmentChange(value: String) = _uiState.update { it.copy(department = value) }
+    fun onDepartmentChange(value: String) = _uiState.update { it.copy(department = value, showErrors = false) }
 
-    fun onSemesterChange(value: String) = _uiState.update { it.copy(semester = value) }
+    fun onSemesterChange(value: String) = _uiState.update { it.copy(semester = value, showErrors = false) }
 
     fun onNameChange(value: String) = _uiState.update { it.copy(name = value) }
 
     /** Persists the profile; returns false if required fields are missing. */
     fun save(): Boolean {
         val state = _uiState.value
-        if (!state.canContinue) return false
+        if (!state.canContinue) {
+            _uiState.update { it.copy(showErrors = true) }
+            return false
+        }
         repository.saveProfile(
             StudentProfile(
                 roll = state.roll,

@@ -2,6 +2,7 @@ package com.corethink.bubtconnect.ui.auth
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -20,6 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -42,7 +44,6 @@ import com.corethink.bubtconnect.ui.design.BubtShapes
 import com.corethink.bubtconnect.ui.design.BubtSpacing
 import com.corethink.bubtconnect.ui.design.BubtSuccess
 import com.corethink.bubtconnect.ui.design.BubtTextField
-import com.corethink.bubtconnect.ui.onboarding.BubtLogo
 import com.corethink.bubtconnect.ui.onboarding.BubtPasswordField
 import com.corethink.bubtconnect.ui.onboarding.OnboardingTopBar
 
@@ -86,20 +87,33 @@ fun AnnexLoginScreen(
                 .padding(horizontal = BubtSpacing.Screen)
                 .verticalScroll(rememberScrollState())
         ) {
-            OnboardingTopBar(title = "Annex Login", onBack = onBack)
+            OnboardingTopBar(title = "", onBack = onBack)
             Spacer(modifier = Modifier.height(BubtSpacing.Lg))
 
             Row(verticalAlignment = Alignment.CenterVertically) {
-                BubtLogo(size = 56.dp)
+                Surface(
+                    shape = BubtShapes.Field,
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    modifier = Modifier.size(56.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Outlined.Shield,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
+                }
                 Spacer(modifier = Modifier.width(BubtSpacing.Md))
                 Column {
                     Text(
-                        text = "BUBT Annex",
+                        text = "Sign in to Annex",
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = "Use your Annex ID + password",
+                        text = "Same ID and password you use on the Annex portal.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -145,7 +159,7 @@ fun AnnexLoginScreen(
             }
 
             BubtPrimaryButton(
-                text = if (state.isLoading) "Syncing…" else "Log in & Sync",
+                text = if (state.isLoading) "Signing in…" else "Sign in",
                 onClick = onLogin,
                 enabled = state.canSubmit,
                 loading = state.isLoading,
@@ -153,16 +167,10 @@ fun AnnexLoginScreen(
             )
             Spacer(modifier = Modifier.height(BubtSpacing.Xl))
 
-            Text(
-                text = "This unlocks",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Spacer(modifier = Modifier.height(BubtSpacing.Md))
             Column(verticalArrangement = Arrangement.spacedBy(BubtSpacing.Md)) {
-                UnlockItem("Attendance")
-                UnlockItem("Results & CGPA")
-                UnlockItem("Class Routine (auto)")
+                UnlockItem("Attendance by course")
+                UnlockItem("Results, SGPA and CGPA")
+                UnlockItem("Auto-synced class routine")
             }
             Spacer(modifier = Modifier.height(BubtSpacing.Lg))
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -174,7 +182,7 @@ fun AnnexLoginScreen(
                 )
                 Spacer(modifier = Modifier.width(BubtSpacing.Xs))
                 Text(
-                    text = "Credentials stored encrypted on device.",
+                    text = "Encrypted and stored only on this device",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -243,3 +251,5 @@ private fun AnnexLoginScreenErrorPreview() {
         )
     }
 }
+
+
