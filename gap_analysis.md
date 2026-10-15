@@ -58,8 +58,9 @@ Current: AttendanceTab uses PullToRefreshBox, OverallSummary ring, AttendanceCar
 Spec: Month header with chevron chips (left/right), filter chips All/Payments/Exams/Holidays. Timeline events with type icons (Payments=payments/warning, Exams=edit_note/success, Holidays=beach_access), past events at 60% opacity. Red "Today" divider line. Action buttons in events (See exam routine, Pay now).
 Current: CalendarTab has MonthHeader with chevron buttons, filter chips via FilterPill (All/Payments/Exams/Holidays), EventRow shows icons with colors, past events dimmed (alpha 0.6), TodayDivider rendered at correct position. Action buttons wired to callbacks. Matches.
 
-### 1v Timetable (exists in spec)
-Spec section 1v exists (line 378). Content: Timetable view variation? Let us look at extracted content quickly conceptually - it's another layout (possibly alternate routine view). Need to check if it's a separate tab/view. Academics has Routine as first tab; 1v might be a specific variant - we should compare. But our RoutineTab follows 1h structure which is the main routine.
+### 1v Fees & Waivers
+Spec: App bar (back, "Fees & Waivers", info). Semester chips. Solid-primary "CURRENT DUE" hero (decorative circle, 38px amount, "Due by 31 Oct · X days left", progress bar, "X% of net payable cleared"). Breakdown card with icon tiles (Total Demand / Waiver / Paid / Overpaid) and captions. "Synced from Annex · 5 min ago". Download Fee Statement (PDF) primary + Payment Instructions outlined. Info sheet explains each line; hero turns green and reads "Credit ৳X" when overpaid > 0.
+Current: FeesScreen now renders the hero first (solid primary, blue progress bar, % cleared), then the breakdown card with coloured icon tiles + captions, then a sync-icon row. Hero flips to BubtSuccess/white with "CREDIT" when overpaid. Info sheet present. Model gained installments/percentCleared; SimpleDate gained daysUntil.
 
 ### 1m Courses
 Spec: Tabs Attendance/Calendar/Courses(selected). Search bar, segmented All/Completed/Remaining. Progress "32 of 58 completed 55%" with progress bar. Course cards: number tile (101), title + code/credits, Done tag (success) when completed, Ongoing tag (primary) when ongoing. 
@@ -89,19 +90,19 @@ Spec: Illustration, "No shared notes yet. Be the first!", body, "Share your note
 
 ## Identified Gaps (specific details)
 
-1. **Welcome illustration (1c)**: Spec has more layered decorative dots/shapes (positioned absolutely) - our WelcomeIllustration is simpler but captures the core (paper card rotated, event card SUN 11, check badge). Visually acceptable but not pixel-perfect to spec's exact composition. Could be refined to match the layered look.
+1. **Welcome illustration (1c)**: REFINED — now composes the soft circle, rotated paper sheet with a logo dot + placeholder lines, floating SUN 11 event card, green check badge and confetti bits, matching the spec's layered look.
 
-2. **Guest Profile avatar size (1e)**: Spec shows 72dp avatar; current ProfileHeader in GuestProfile uses 56dp. Also the warning dot position relative to 72dp.
+2. **Guest Profile avatar size (1e)**: RESOLVED — avatar is now 72dp with a 40dp icon and warning dot.
 
 3. **Guest Profile summary card style (1e)**: Spec labels it as "tonal" card with specific padding; our ProfileSummaryCard uses Surface with surfaceContainer color - tonally similar. Also in 1e the rows have per-row padding/height as shown.
 
-4. **Connect card (1e)**: Filled-primary with white text on primary background. Our ConnectAnnexCard uses BubtCardStyle.Filled with primaryContainer/onPrimaryContainer? Check: in components, Filled uses primaryContainer/onPrimaryContainer typically. But spec says "filled-primary surface" - CTA should stand out. Current implementation uses BubtCardStyle.Filled; in our theme filled cards use primaryContainer. But spec shows solid primary background (#2563EB) for the Connect card in Guest context. Compare: ConnectAnnexCard does BubtCard(modifier = modifier, style = BubtCardStyle.Filled) and puts content with onPrimaryContainer colors. That gives primaryContainer background - close to primary. Maybe should be solid primary for max emphasis as spec shows.
+4. **Connect card (1e)**: RESOLVED — Guest ConnectAnnexCard is now a solid primary Surface with onPrimary text and translucent chips, matching the spec's filled-primary CTA.
 
-5. **Profile identity card (1u)**: Spec shows outlined card with avatar 64dp, name, ID, tags. Our ProfileIdentity uses BubtCard style Outlined and avatar 48dp? Let us check - in ProfileScreen/ProfileIdentity: avatar size 48dp (seen in context), initials. Spec says 64dp. Also tags styling.
+5. **Profile identity card (1u)**: RESOLVED — outlined card identity avatar is now 64dp.
 
 6. **Profile NOTIFICATIONS card (1u)**: Outlined card with rows. Spec shows specific heights (54dp rows) and dividers. Our NotificationSettings uses Surface with outline border and Row items - structure matches.
 
-7. **Empty states (1w, 1x)**: We have text fallbacks but not the illustrated empty states as specified. Spec shows custom illustrations for empty states. Should add EmptyState composables matching spec illustrations.
+7. **Empty states (1w, 1x)**: ADDED — shared `EmptyState` component builds the 1w/1x illustrations from shapes + a Material icon; wired into Exams tab (exam alerts action) and Community feed (Share your notes action).
 
 8. **Scanner steps 3/4 polish**: Capture step (1q) - camera preview frame, grid, capture button (large), upload from gallery, thumbnails. Review step (1r) - page thumbnails with drag handle, action icons (crop/rotate/filter/delete), filename field. We have implementations; need to verify against exact layouts.
 
@@ -111,4 +112,4 @@ Spec: Illustration, "No shared notes yet. Be the first!", body, "Share your note
 
 11. **Academics tabs order**: Spec shows Routine/Exams/Results/Attendance/Calendar in 1h-1l; 1m shows Attendance/Calendar/Courses as tabs in Courses view? Wait look up: 1m extracted shows tabs line "Attendance � Calendar � Courses" (selected Courses). Our AcademicsTab enum has Routine, Exams, Results, Attendance, Calendar, Courses - 6 tabs total. Spec 1h shows tabs Routine/Exams/Results/Attendance/Calendar (5 tabs). 1m is under Academics hub showing Courses tab selected - so total 6 tabs as implemented. Correct.
 
-12. **1v Timetable**: Spec has 1v section. Do we need a separate Timetable view? The Routine tab (1h) is the main routine. 1v might be an alternate/extended timetable view - should compare. Let us look up 1v content more.
+12. **1v Fees & Waivers**: RESOLVED — see 1v section above; hero/breakdown layout now matches the spec.

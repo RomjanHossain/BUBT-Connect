@@ -44,10 +44,19 @@ class AcademicsModelTest {
         val due = FeeStatement("Fall 2026", 58_500, "Merit 30%", 14_400, 30_000, SimpleDate(2026, 10, 31))
         assertEquals(14_100, due.currentDue)
         assertEquals(0, due.overpaid)
+        assertEquals(68, due.percentCleared)
 
         val credit = FeeStatement("Spring 2026", 56_000, "Merit 25%", 11_500, 45_500, SimpleDate(2026, 2, 28))
         assertEquals(0, credit.currentDue)
         assertEquals(1_000, credit.overpaid)
+        assertEquals(100, credit.percentCleared)
+    }
+
+    @Test
+    fun simpleDateDaysUntilCountsWholeDays() {
+        assertEquals(16, SimpleDate(2026, 10, 31).daysUntil(SimpleDate(2026, 10, 15)))
+        assertEquals(0, SimpleDate(2026, 10, 15).daysUntil(SimpleDate(2026, 10, 15)))
+        assertEquals(-4, SimpleDate(2026, 10, 11).daysUntil(SimpleDate(2026, 10, 15)))
     }
 
     @Test

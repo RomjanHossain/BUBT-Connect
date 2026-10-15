@@ -18,6 +18,13 @@ data class SimpleDate(val year: Int, val month: Int, val day: Int) : Comparable<
         return SimpleDate(calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH) + 1, calendar.get(Calendar.DAY_OF_MONTH))
     }
 
+    /** Whole days from today until this date. Negative when the date has passed. */
+    fun daysUntil(today: SimpleDate = today()): Int {
+        val millisPerDay = 24.0 * 60 * 60 * 1000
+        val diff = toCalendar().timeInMillis - today.toCalendar().timeInMillis
+        return Math.round(diff / millisPerDay).toInt()
+    }
+
     /** "Sun", "Mon", … */
     val weekdayShort: String
         get() = toCalendar().getDisplayName(Calendar.DAY_OF_WEEK, Calendar.SHORT, Locale.US).orEmpty()
@@ -163,16 +170,21 @@ data class CurriculumCourse(
     val status: CourseStatus
 )
 
-// ------------------------------------------------------------- fees (1t)
+// ------------------------------------------------------------- fees (1v)
 data class FeeStatement(
     val semester: String,
     val totalDemand: Int,
     val waiverLabel: String,
     val waiver: Int,
     val paid: Int,
-    val dueDate: SimpleDate
+    val dueDate: SimpleDate,
+    val installments: Int = 1
 ) {
-    private val net: Int get() = totalDemand - waiver
-    val overpaid: Int get() = (paid - net).coerceAtLeast(0)
-    val currentDue: Int get() = (net - paid).coerceAtLeast(0)
+    val netPayable: Int get() = totalDemand - waiver
+    val overpaid: Int get() = (paid - netPayable).coerceAtLeast(0)
+    val currentDue: Int get() = (netPayable - paid).coerceAtLeast(0)
+
+    /** Share of the net payable already paid, 0–100. */
+    val percentCleared: Int
+        get() = if (netPayable <= 0) 100 else ((paid * 100) / netPayable).coerceIn(0, 100)
 }

@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -43,7 +44,9 @@ import com.corethink.bubtconnect.R
 import com.corethink.bubtconnect.ui.design.BUBTConnectMaterial3Theme
 import com.corethink.bubtconnect.ui.design.BubtPrimaryButton
 import com.corethink.bubtconnect.ui.design.BubtSpacing
+import com.corethink.bubtconnect.ui.design.BubtSuccess
 import com.corethink.bubtconnect.ui.design.BubtTextButton
+import com.corethink.bubtconnect.ui.design.BubtWarning
 
 /** 1c · Welcome splash. Left-aligned single screen with a floating day/event illustration. */
 @Composable
@@ -112,80 +115,138 @@ fun WelcomeScreen(
     }
 }
 
-/** Rotated event card on a soft circle with a floating check badge — stands in for the Lottie loop. */
+/** Soft circle with a rotated paper card, floating event card and a success check badge — stands in for the Lottie loop. */
 @Composable
 private fun WelcomeIllustration() {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(260.dp),
+            .height(270.dp),
         contentAlignment = Alignment.Center
     ) {
         Box(
             modifier = Modifier
-                .size(200.dp)
+                .size(220.dp, 234.dp)
                 .clip(CircleShape)
                 .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f))
         )
+
+        // Rotated paper sheet with a logo dot and placeholder lines.
         Surface(
             shape = MaterialTheme.shapes.medium,
             color = MaterialTheme.colorScheme.surface,
             shadowElevation = 4.dp,
             modifier = Modifier
-                .align(Alignment.Center)
+                .offset(x = (-34).dp, y = (-5).dp)
+                .size(108.dp, 140.dp)
                 .graphicsLayer { rotationZ = -8f }
         ) {
-            Row(
-                modifier = Modifier.padding(BubtSpacing.Lg),
-                verticalAlignment = Alignment.CenterVertically
+            Column(
+                modifier = Modifier.padding(14.dp),
+                verticalArrangement = Arrangement.spacedBy(7.dp)
             ) {
                 Box(
                     modifier = Modifier
-                        .size(48.dp)
-                        .clip(MaterialTheme.shapes.small)
-                        .background(MaterialTheme.colorScheme.primaryContainer),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Event,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                }
-                Spacer(modifier = Modifier.width(BubtSpacing.Md))
-                Column {
-                    Text(
-                        text = "SUN",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Text(
-                        text = "11",
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
+                        .size(22.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary)
+                        .align(Alignment.CenterHorizontally)
+                )
+                PaperLine(fraction = 0.8f)
+                PaperLine(fraction = 0.55f)
+                Spacer(modifier = Modifier.height(8.dp))
+                PaperLine(fraction = 1f)
+                PaperLine(fraction = 0.85f)
+                PaperLine(fraction = 0.7f)
+                PaperLine(fraction = 0.8f)
             }
         }
+
+        // Floating day/event card.
+        Surface(
+            shape = MaterialTheme.shapes.medium,
+            color = MaterialTheme.colorScheme.surface,
+            shadowElevation = 4.dp,
+            modifier = Modifier
+                .offset(x = 58.dp, y = (-48).dp)
+                .width(92.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(10.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Event,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(20.dp)
+                )
+                Text(
+                    text = "SUN",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = "11",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+        }
+
+        // Success check badge.
         Surface(
             shape = CircleShape,
-            color = MaterialTheme.colorScheme.primary,
+            color = BubtSuccess,
+            shadowElevation = 8.dp,
             modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(end = 60.dp, bottom = 20.dp)
-                .size(44.dp)
+                .offset(x = 54.dp, y = 63.dp)
+                .size(56.dp)
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(
                     imageVector = Icons.Filled.Check,
                     contentDescription = null,
-                    tint = Color.White
+                    tint = Color.White,
+                    modifier = Modifier.size(30.dp)
                 )
             }
         }
+
+        // Decorative confetti bits.
+        Box(
+            modifier = Modifier
+                .offset(x = (-105).dp, y = (-100).dp)
+                .size(10.dp)
+                .background(BubtWarning, CircleShape)
+        )
+        Box(
+            modifier = Modifier
+                .offset(x = (-109).dp, y = 72.dp)
+                .size(14.dp)
+                .clip(MaterialTheme.shapes.extraSmall)
+                .background(MaterialTheme.colorScheme.primary)
+                .graphicsLayer { rotationZ = 20f }
+        )
+        Box(
+            modifier = Modifier
+                .offset(x = 116.dp, y = 19.dp)
+                .size(8.dp)
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.5f), CircleShape)
+        )
     }
+}
+
+@Composable
+private fun PaperLine(fraction: Float) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth(fraction)
+            .height(4.dp)
+            .clip(CircleShape)
+            .background(MaterialTheme.colorScheme.outlineVariant)
+    )
 }
 
 /** The BUBT crest on a white disc — the crest artwork assumes a white ground in both themes. */

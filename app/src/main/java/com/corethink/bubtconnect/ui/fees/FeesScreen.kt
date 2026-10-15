@@ -1,26 +1,36 @@
 package com.corethink.bubtconnect.ui.fees
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.ReceiptLong
 import androidx.compose.material.icons.outlined.Savings
+import androidx.compose.material.icons.outlined.Sell
+import androidx.compose.material.icons.outlined.Sync
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -33,8 +43,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -50,6 +63,7 @@ import com.corethink.bubtconnect.ui.design.BUBTConnectMaterial3Theme
 import com.corethink.bubtconnect.ui.design.BubtPrimaryButton
 import com.corethink.bubtconnect.ui.design.BubtShapes
 import com.corethink.bubtconnect.ui.design.BubtSpacing
+import com.corethink.bubtconnect.ui.design.BubtSuccess
 import com.corethink.bubtconnect.ui.design.BubtTextButton
 import com.corethink.bubtconnect.ui.onboarding.OnboardingTopBar
 
@@ -72,7 +86,7 @@ fun FeesRoute(
     )
 }
 
-/** 1t · Fees & waivers. ⓘ opens a sheet explaining each line. Requires Annex. */
+/** 1v · Fees & waivers. ⓘ opens a sheet explaining each line. Requires Annex. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FeesScreen(
@@ -134,21 +148,9 @@ fun FeesScreen(
                     modifier = Modifier.padding(horizontal = BubtSpacing.Screen),
                     verticalArrangement = Arrangement.spacedBy(BubtSpacing.Md)
                 ) {
-                    Text(
-                        text = "Semester",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    BreakdownCard(statement)
                     CurrentDueCard(statement)
-                    if (statement.overpaid > 0) {
-                        CreditNote(statement.overpaid)
-                    }
-                    Text(
-                        text = rememberSyncedLabel(state.lastSyncedAt).replace("Synced", "Synced from Annex ·"),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    BreakdownCard(statement)
+                    SyncedRow(state.lastSyncedAt)
                 }
             }
 
@@ -185,89 +187,192 @@ private fun BreakdownCard(statement: FeeStatement) {
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
     ) {
         Column(modifier = Modifier.padding(horizontal = BubtSpacing.CardPadding)) {
-            FeeLine("Total Demand", "Base tuition + fees", formatTaka(statement.totalDemand))
+            FeeLine(
+                icon = Icons.Outlined.ReceiptLong,
+                tileColor = MaterialTheme.colorScheme.surfaceContainer,
+                tint = MaterialTheme.colorScheme.onSurface,
+                label = "Total Demand",
+                caption = "Base tuition + fees",
+                amount = formatTaka(statement.totalDemand)
+            )
             HorizontalDivider(color = MaterialTheme.colorScheme.outline)
-            FeeLine("Waiver", statement.waiverLabel, "– ${formatTaka(statement.waiver)}")
+            FeeLine(
+                icon = Icons.Outlined.Sell,
+                tileColor = MaterialTheme.colorScheme.tertiaryContainer,
+                tint = MaterialTheme.colorScheme.onTertiaryContainer,
+                label = "Waiver",
+                caption = statement.waiverLabel,
+                amount = "– ${formatTaka(statement.waiver)}",
+                amountColor = MaterialTheme.colorScheme.onTertiaryContainer
+            )
             HorizontalDivider(color = MaterialTheme.colorScheme.outline)
-            FeeLine("Paid", null, formatTaka(statement.paid))
+            FeeLine(
+                icon = Icons.Outlined.CheckCircle,
+                tileColor = MaterialTheme.colorScheme.primaryContainer,
+                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                label = "Paid",
+                caption = "${statement.installments} installments",
+                amount = formatTaka(statement.paid)
+            )
             HorizontalDivider(color = MaterialTheme.colorScheme.outline)
-            FeeLine("Overpaid", null, formatTaka(statement.overpaid), muted = statement.overpaid == 0)
+            FeeLine(
+                icon = Icons.Outlined.Savings,
+                tileColor = MaterialTheme.colorScheme.surfaceContainer,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                label = "Overpaid",
+                caption = "Carried to next semester",
+                amount = formatTaka(statement.overpaid),
+                amountColor = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
 
 @Composable
-private fun FeeLine(label: String, caption: String?, amount: String, muted: Boolean = false) {
+private fun FeeLine(
+    icon: ImageVector,
+    tileColor: Color,
+    tint: Color,
+    label: String,
+    caption: String?,
+    amount: String,
+    amountColor: Color = MaterialTheme.colorScheme.onSurface
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = BubtSpacing.Md),
+            .height(58.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        Box(
+            modifier = Modifier
+                .size(34.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(tileColor),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(18.dp))
+        }
+        Spacer(modifier = Modifier.width(BubtSpacing.Md))
         Column(modifier = Modifier.weight(1f)) {
-            Text(text = label, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
-            caption?.let {
-                Text(text = it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
-        Text(
-            text = amount,
-            style = MaterialTheme.typography.titleSmall,
-            color = if (muted) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface
-        )
-    }
-}
-
-@Composable
-private fun CurrentDueCard(statement: FeeStatement) {
-    val settled = statement.currentDue == 0
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = BubtShapes.Card,
-        color = if (settled) MaterialTheme.colorScheme.surfaceContainer else MaterialTheme.colorScheme.primaryContainer,
-        contentColor = if (settled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onPrimaryContainer
-    ) {
-        Row(
-            modifier = Modifier.padding(BubtSpacing.CardPadding),
-            verticalAlignment = Alignment.Bottom
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(text = "Current Due", style = MaterialTheme.typography.labelLarge)
-                Text(text = formatTaka(statement.currentDue), style = MaterialTheme.typography.displaySmall)
-            }
             Text(
-                text = if (settled) "Settled" else "by ${statement.dueDate.day}\n${statement.dueDate.monthShort}",
-                style = MaterialTheme.typography.labelMedium,
-                textAlign = TextAlign.End
-            )
-        }
-    }
-}
-
-@Composable
-private fun CreditNote(amount: Int) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = BubtShapes.Field,
-        color = MaterialTheme.colorScheme.surfaceContainer
-    ) {
-        Row(
-            modifier = Modifier.padding(BubtSpacing.Md),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                Icons.Outlined.Savings,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(20.dp)
-            )
-            Spacer(modifier = Modifier.width(BubtSpacing.Sm))
-            Text(
-                text = "${formatTaka(amount)} overpaid will be credited to your next semester.",
-                style = MaterialTheme.typography.bodySmall,
+                text = label,
+                style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurface
             )
+            caption?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
+        Spacer(modifier = Modifier.width(BubtSpacing.Sm))
+        Text(text = amount, style = MaterialTheme.typography.titleSmall, color = amountColor)
+    }
+}
+
+/** Solid-primary hero that flips to success green and reads "Credit" when overpaid (1v). */
+@Composable
+private fun CurrentDueCard(statement: FeeStatement) {
+    val credit = statement.overpaid > 0
+    val settled = statement.currentDue == 0 && !credit
+    val container = when {
+        credit -> BubtSuccess
+        settled -> MaterialTheme.colorScheme.surfaceContainer
+        else -> MaterialTheme.colorScheme.primary
+    }
+    val onContainer = when {
+        credit -> Color.White
+        settled -> MaterialTheme.colorScheme.onSurface
+        else -> MaterialTheme.colorScheme.onPrimary
+    }
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        color = container,
+        contentColor = onContainer
+    ) {
+        Box {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .offset(x = 50.dp, y = (-60).dp)
+                    .size(150.dp)
+                    .background(onContainer.copy(alpha = 0.1f), CircleShape)
+            )
+            Column(modifier = Modifier.padding(20.dp)) {
+                Text(
+                    text = when {
+                        credit -> "CREDIT"
+                        settled -> "SETTLED"
+                        else -> "CURRENT DUE"
+                    },
+                    style = MaterialTheme.typography.labelMedium,
+                    color = onContainer.copy(alpha = 0.85f)
+                )
+                Text(
+                    text = formatTaka(if (credit) statement.overpaid else statement.currentDue),
+                    style = MaterialTheme.typography.displaySmall,
+                    fontWeight = FontWeight.Bold
+                )
+                val dueInDays = statement.dueDate.daysUntil()
+                Text(
+                    text = when {
+                        credit -> "Carried to next semester"
+                        settled -> "Nothing due this semester"
+                        dueInDays >= 0 -> "Due by ${statement.dueDate.day} ${statement.dueDate.monthShort} · $dueInDays days left"
+                        else -> "Was due ${statement.dueDate.day} ${statement.dueDate.monthShort}"
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = onContainer.copy(alpha = 0.9f),
+                    modifier = Modifier.padding(top = BubtSpacing.Xs)
+                )
+                Spacer(modifier = Modifier.height(BubtSpacing.Md))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(6.dp)
+                        .clip(CircleShape)
+                        .background(onContainer.copy(alpha = 0.25f))
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(statement.percentCleared / 100f)
+                            .fillMaxHeight()
+                            .clip(CircleShape)
+                            .background(onContainer)
+                    )
+                }
+                Text(
+                    text = "${statement.percentCleared}% of net payable cleared",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = onContainer.copy(alpha = 0.9f),
+                    modifier = Modifier.padding(top = BubtSpacing.Sm)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SyncedRow(lastSyncedAt: Long?) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(BubtSpacing.Xs)
+    ) {
+        Icon(
+            imageVector = Icons.Outlined.Sync,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(16.dp)
+        )
+        Text(
+            text = rememberSyncedLabel(lastSyncedAt).replace("Synced", "Synced from Annex ·"),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 

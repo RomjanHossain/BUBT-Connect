@@ -161,9 +161,9 @@ object SampleAcademicsRepository : AcademicsRepository {
     )
 
     override fun feeStatements(): List<FeeStatement> = listOf(
-        FeeStatement("Fall 2026", 58_500, "Merit 30%", 14_400, 30_000, SimpleDate(2026, 10, 31)),
-        FeeStatement("Summer 2026", 56_000, "Merit 30%", 13_800, 42_200, SimpleDate(2026, 6, 30)),
-        FeeStatement("Spring 2026", 56_000, "Merit 25%", 11_500, 45_500, SimpleDate(2026, 2, 28)),
-        FeeStatement("Fall 2025", 54_000, "Sibling 10%", 4_800, 49_200, SimpleDate(2025, 10, 31))
+        FeeStatement("Fall 2026", 58_500, "Merit 30%", 14_400, 30_000, SimpleDate(2026, 10, 31), installments = 2),
+        FeeStatement("Summer 2026", 56_000, "Merit 30%", 13_800, 42_200, SimpleDate(2026, 6, 30), installments = 2),
+        FeeStatement("Spring 2026", 56_000, "Merit 25%", 11_500, 45_500, SimpleDate(2026, 2, 28), installments = 2),
+        FeeStatement("Fall 2025", 54_000, "Sibling 10%", 4_800, 49_200, SimpleDate(2025, 10, 31), installments = 2)
     )
 }
