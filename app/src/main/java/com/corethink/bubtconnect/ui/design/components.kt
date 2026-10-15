@@ -359,6 +359,7 @@ fun BubtChip(
     style: BubtChipStyle = BubtChipStyle.Normal,
     pressed: Boolean = false,
     leadingDot: Color? = null,
+    leadingIcon: ImageVector? = null,
     onClick: (() -> Unit)? = null
 ) {
     val container = when (style) {
@@ -404,6 +405,14 @@ fun BubtChip(
                         .background(leadingDot)
                 )
                 Spacer(modifier = Modifier.width(BubtSpacing.Sm))
+            }
+            if (leadingIcon != null) {
+                Icon(
+                    imageVector = leadingIcon,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(BubtSpacing.Xs))
             }
             Text(text = text, style = MaterialTheme.typography.labelMedium)
         }
