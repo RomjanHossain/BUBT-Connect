@@ -1,7 +1,10 @@
 package com.corethink.bubtconnect.ui.onboarding
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -9,9 +12,16 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -19,9 +29,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.corethink.bubtconnect.data.model.BubtDepartments
@@ -29,7 +41,6 @@ import com.corethink.bubtconnect.data.model.BubtSemesters
 import com.corethink.bubtconnect.ui.design.BUBTConnectMaterial3Theme
 import com.corethink.bubtconnect.ui.design.BubtPrimaryButton
 import com.corethink.bubtconnect.ui.design.BubtSpacing
-import com.corethink.bubtconnect.ui.design.BubtTextButton
 import com.corethink.bubtconnect.ui.design.BubtTextField
 
 @Composable
@@ -49,12 +60,11 @@ fun ProfileSetupRoute(
         onSemesterChange = viewModel::onSemesterChange,
         onNameChange = viewModel::onNameChange,
         onContinue = { if (viewModel.save()) onContinue() },
-        onSkip = onSkip,
         isEditing = isEditing
     )
 }
 
-/** 1c · Basic profile setup — step 1 of 2, no login needed. [isEditing] reuses it from Profile (1s). */
+/** 1d · Basic profile setup — step 1 of 2. Matches HTML design 1d exactly. */
 @Composable
 fun ProfileSetupScreen(
     state: ProfileSetupUiState,
@@ -64,7 +74,6 @@ fun ProfileSetupScreen(
     onSemesterChange: (String) -> Unit,
     onNameChange: (String) -> Unit,
     onContinue: () -> Unit,
-    onSkip: () -> Unit,
     isEditing: Boolean = false
 ) {
     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
@@ -74,44 +83,72 @@ fun ProfileSetupScreen(
                 .statusBarsPadding()
                 .navigationBarsPadding()
                 .imePadding()
-                .padding(horizontal = BubtSpacing.Screen)
+                .padding(horizontal = 24.dp)
         ) {
-            OnboardingTopBar(
-                title = if (isEditing) "Edit profile" else "",
-                onBack = onBack,
-                trailing = {
-                    if (!isEditing) {
-                        Text(
-                            text = "Step 1 of 2",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+            // App Bar: Back arrow on left, Step 1 of 2 on right
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = onBack, modifier = Modifier.size(40.dp)) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back",
+                        tint = MaterialTheme.colorScheme.onSurface
+                    )
                 }
-            )
+                Spacer(modifier = Modifier.weight(1f))
+                if (!isEditing) {
+                    Text(
+                        text = "Step 1 of 2",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            // Progress bar line: 4dp height, 50% fill
             if (!isEditing) {
-                Spacer(modifier = Modifier.height(BubtSpacing.Sm))
-                StepProgress(totalSteps = 2, completedSteps = 1)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(4.dp)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(0.5f)
+                            .height(4.dp)
+                            .clip(RoundedCornerShape(2.dp))
+                            .background(MaterialTheme.colorScheme.primary)
+                    )
+                }
             }
 
             Column(
                 modifier = Modifier
                     .weight(1f)
                     .verticalScroll(rememberScrollState())
-                    .padding(top = BubtSpacing.Xl),
-                verticalArrangement = Arrangement.spacedBy(BubtSpacing.Lg)
+                    .padding(top = 22.dp),
+                verticalArrangement = Arrangement.spacedBy(22.dp)
             ) {
-                Text(
-                    text = if (isEditing) "Update your basic details." else "Let's set up your profile",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = if (isEditing) "Update your basic details." else "No account needed. You can connect Annex later.",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(
+                        text = if (isEditing) "Edit profile" else "Let's set up your profile",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = if (isEditing) "Update your basic details." else "No account needed. You can connect Annex later.",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
                 BubtTextField(
                     value = state.roll,
                     onValueChange = onRollChange,
@@ -147,7 +184,7 @@ fun ProfileSetupScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = BubtSpacing.Lg),
+                    .padding(vertical = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 BubtPrimaryButton(
@@ -155,10 +192,6 @@ fun ProfileSetupScreen(
                     onClick = onContinue,
                     modifier = Modifier.fillMaxWidth()
                 )
-                if (!isEditing) {
-                    Spacer(modifier = Modifier.height(BubtSpacing.Xs))
-                    BubtTextButton(text = "Skip for now", onClick = onSkip)
-                }
             }
         }
     }
@@ -175,8 +208,7 @@ private fun ProfileSetupScreenPreview() {
             onDepartmentChange = {},
             onSemesterChange = {},
             onNameChange = {},
-            onContinue = {},
-            onSkip = {}
+            onContinue = {}
         )
     }
 }

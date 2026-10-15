@@ -1,6 +1,7 @@
 package com.corethink.bubtconnect.ui.courses
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,7 +15,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
@@ -31,19 +34,25 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.corethink.bubtconnect.data.model.CourseStatus
 import com.corethink.bubtconnect.data.model.CurriculumCourse
 import com.corethink.bubtconnect.data.repository.SampleAcademicsRepository
-import com.corethink.bubtconnect.ui.components.BubtSegmentedControl
+import com.corethink.bubtconnect.ui.components.FilterPill
 import com.corethink.bubtconnect.ui.components.formatCredits
 import com.corethink.bubtconnect.ui.design.BUBTConnectMaterial3Theme
+import com.corethink.bubtconnect.ui.design.BubtOnSuccessContainerLight
 import com.corethink.bubtconnect.ui.design.BubtShapes
 import com.corethink.bubtconnect.ui.design.BubtSpacing
+import com.corethink.bubtconnect.ui.design.BubtSuccess
+import com.corethink.bubtconnect.ui.design.BubtSuccessContainerLight
 import com.corethink.bubtconnect.ui.design.BubtTag
 import com.corethink.bubtconnect.ui.design.BubtTagStyle
 
@@ -57,7 +66,7 @@ fun CoursesTab(viewModel: CoursesViewModel = viewModel()) {
     )
 }
 
-/** 1m · All courses. Segmented filter, completion progress, Done badges on completed rows. */
+/** 1m · All courses. Matches HTML 1m exactly. */
 @Composable
 fun CoursesContent(
     state: CoursesUiState,
@@ -66,8 +75,8 @@ fun CoursesContent(
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = BubtSpacing.Screen, vertical = BubtSpacing.Md),
-        verticalArrangement = Arrangement.spacedBy(BubtSpacing.Md)
+        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         item {
             OutlinedTextField(
@@ -84,7 +93,7 @@ fun CoursesContent(
                     }
                 } else null,
                 singleLine = true,
-                shape = BubtShapes.Field,
+                shape = RoundedCornerShape(26.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = MaterialTheme.colorScheme.primary,
                     unfocusedBorderColor = MaterialTheme.colorScheme.outline,
@@ -94,37 +103,47 @@ fun CoursesContent(
             )
         }
         item {
-            BubtSegmentedControl(
-                options = CourseFilter.entries,
-                selected = state.filter,
-                label = CourseFilter::label,
-                onSelect = onSelectFilter
-            )
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(CourseFilter.entries) { filter ->
+                    FilterPill(
+                        text = filter.label,
+                        selected = filter == state.filter,
+                        onClick = { onSelectFilter(filter) }
+                    )
+                }
+            }
         }
         item {
-            Column {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = "${state.completedCount} of ${state.totalCount} courses completed",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.weight(1f)
                     )
                     Text(
                         text = "${state.progressPercent}%",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                LinearProgressIndicator(
-                    progress = { state.progressPercent / 100f },
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = BubtSpacing.Sm)
-                        .height(4.dp),
-                    color = MaterialTheme.colorScheme.primary,
-                    trackColor = MaterialTheme.colorScheme.surfaceContainerHighest
-                )
+                        .height(6.dp)
+                        .clip(RoundedCornerShape(3.dp))
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(state.progressPercent / 100f)
+                            .height(6.dp)
+                            .clip(RoundedCornerShape(3.dp))
+                            .background(BubtSuccess)
+                    )
+                }
             }
         }
         if (state.courses.isEmpty()) {
@@ -132,7 +151,8 @@ fun CoursesContent(
                 Text(
                     text = "No courses match \"${state.query}\".",
                     style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(vertical = 12.dp)
                 )
             }
         }
@@ -146,20 +166,28 @@ fun CoursesContent(
 private fun CourseCard(item: CurriculumCourse) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = BubtShapes.Card,
+        shape = RoundedCornerShape(16.dp),
         color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+        shadowElevation = 1.dp
     ) {
         Row(
-            modifier = Modifier.padding(BubtSpacing.CardPadding),
-            verticalAlignment = Alignment.CenterVertically
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            NumberTile(number = item.course.code.takeLast(3))
-            Spacer(modifier = Modifier.width(BubtSpacing.Md))
-            Column(modifier = Modifier.weight(1f)) {
+            NumberTile(
+                number = item.course.code.takeLast(3),
+                status = item.status
+            )
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
                 Text(
                     text = item.course.title,
                     style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -182,45 +210,50 @@ private fun CourseCard(item: CurriculumCourse) {
                     text = "Ongoing",
                     style = BubtTagStyle.Primary
                 )
-                CourseStatus.Remaining -> Unit
+                CourseStatus.Remaining -> {}
             }
         }
     }
 }
 
-/** Leading rounded tile showing the 3-digit course number (e.g. "101"). */
 @Composable
-private fun NumberTile(number: String) {
-    Surface(
-        shape = BubtShapes.Field,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        modifier = Modifier.size(48.dp)
+private fun NumberTile(number: String, status: CourseStatus) {
+    val container = when (status) {
+        CourseStatus.Completed -> BubtSuccessContainerLight
+        CourseStatus.InProgress -> MaterialTheme.colorScheme.primaryContainer
+        CourseStatus.Remaining -> MaterialTheme.colorScheme.surfaceContainer
+    }
+    val content = when (status) {
+        CourseStatus.Completed -> BubtOnSuccessContainerLight
+        CourseStatus.InProgress -> MaterialTheme.colorScheme.onPrimaryContainer
+        CourseStatus.Remaining -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
+
+    Box(
+        modifier = Modifier
+            .size(40.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(container),
+        contentAlignment = Alignment.Center
     ) {
-        Box(contentAlignment = Alignment.Center) {
-            Text(
-                text = number,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
+        Text(
+            text = number,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = content,
+            fontSize = 11.sp
+        )
     }
 }
 
-@Preview(showBackground = true, heightDp = 750)
+@Preview(showBackground = true)
 @Composable
-private fun CoursesContentPreview() {
-    val courses = SampleAcademicsRepository.curriculum()
+private fun CoursesTabPreview() {
     BUBTConnectMaterial3Theme {
-        Surface(color = MaterialTheme.colorScheme.background) {
-            CoursesContent(
-                state = CoursesUiState(
-                    courses = courses,
-                    completedCount = courses.count { it.status == CourseStatus.Completed },
-                    totalCount = courses.size
-                ),
-                onQueryChange = {},
-                onSelectFilter = {}
-            )
-        }
+        CoursesContent(
+            state = CoursesUiState(courses = SampleAcademicsRepository.curriculum()),
+            onQueryChange = {},
+            onSelectFilter = {}
+        )
     }
 }

@@ -1,6 +1,7 @@
 package com.corethink.bubtconnect.ui.auth
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,13 +17,16 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -32,20 +36,20 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.corethink.bubtconnect.ui.design.BUBTConnectMaterial3Theme
 import com.corethink.bubtconnect.ui.design.BubtFieldState
 import com.corethink.bubtconnect.ui.design.BubtPrimaryButton
-import com.corethink.bubtconnect.ui.design.BubtShapes
 import com.corethink.bubtconnect.ui.design.BubtSpacing
 import com.corethink.bubtconnect.ui.design.BubtSuccess
 import com.corethink.bubtconnect.ui.design.BubtTextField
 import com.corethink.bubtconnect.ui.onboarding.BubtPasswordField
-import com.corethink.bubtconnect.ui.onboarding.OnboardingTopBar
 
 @Composable
 fun AnnexLoginRoute(
@@ -67,7 +71,7 @@ fun AnnexLoginRoute(
     )
 }
 
-/** 1e · Annex login. On success → sync → Home with all tiles unlocked. */
+/** 1f · Annex login. Matches HTML 1f exactly. */
 @Composable
 fun AnnexLoginScreen(
     state: AnnexLoginUiState,
@@ -84,17 +88,33 @@ fun AnnexLoginScreen(
                 .statusBarsPadding()
                 .navigationBarsPadding()
                 .imePadding()
-                .padding(horizontal = BubtSpacing.Screen)
+                .padding(horizontal = 24.dp)
                 .verticalScroll(rememberScrollState())
         ) {
-            OnboardingTopBar(title = "", onBack = onBack)
-            Spacer(modifier = Modifier.height(BubtSpacing.Lg))
+            // App bar: Back arrow on left
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = onBack, modifier = Modifier.size(40.dp)) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back",
+                        tint = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Header Column: Shield icon box on top + Headline + Subtitle
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Surface(
-                    shape = BubtShapes.Field,
+                    shape = RoundedCornerShape(16.dp),
                     color = MaterialTheme.colorScheme.primaryContainer,
-                    modifier = Modifier.size(56.dp)
+                    modifier = Modifier.size(52.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
@@ -105,21 +125,22 @@ fun AnnexLoginScreen(
                         )
                     }
                 }
-                Spacer(modifier = Modifier.width(BubtSpacing.Md))
-                Column {
-                    Text(
-                        text = "Sign in to Annex",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = "Same ID and password you use on the Annex portal.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Sign in to Annex",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 28.sp,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = "Same ID and password you use on the Annex portal.",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
-            Spacer(modifier = Modifier.height(BubtSpacing.Xl))
+
+            Spacer(modifier = Modifier.height(22.dp))
 
             BubtTextField(
                 value = state.studentId,
@@ -129,7 +150,9 @@ fun AnnexLoginScreen(
                 keyboardType = KeyboardType.Number,
                 stateOverride = if (state.error != null) BubtFieldState.Error else null
             )
-            Spacer(modifier = Modifier.height(BubtSpacing.Md))
+
+            Spacer(modifier = Modifier.height(16.dp))
+
             BubtPasswordField(
                 value = state.password,
                 onValueChange = onPasswordChange,
@@ -139,24 +162,29 @@ fun AnnexLoginScreen(
             AnimatedVisibility(visible = state.error != null) {
                 AuthErrorBanner(
                     message = state.error.orEmpty(),
-                    modifier = Modifier.padding(top = BubtSpacing.Md)
+                    modifier = Modifier.padding(top = 12.dp)
                 )
             }
 
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Keep me signed in row
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = BubtSpacing.Md),
+                    .padding(vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     text = "Keep me signed in",
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.weight(1f)
                 )
                 Switch(checked = state.keepSignedIn, onCheckedChange = onKeepSignedInChange)
             }
+
+            Spacer(modifier = Modifier.height(12.dp))
 
             BubtPrimaryButton(
                 text = if (state.isLoading) "Signing in…" else "Sign in",
@@ -165,29 +193,49 @@ fun AnnexLoginScreen(
                 loading = state.isLoading,
                 modifier = Modifier.fillMaxWidth()
             )
-            Spacer(modifier = Modifier.height(BubtSpacing.Xl))
 
-            Column(verticalArrangement = Arrangement.spacedBy(BubtSpacing.Md)) {
-                UnlockItem("Attendance by course")
-                UnlockItem("Results, SGPA and CGPA")
-                UnlockItem("Auto-synced class routine")
+            Spacer(modifier = Modifier.height(22.dp))
+
+            // Feature Checklist Card
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.surface,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+            ) {
+                Column(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    UnlockItem("Attendance by course")
+                    UnlockItem("Results, SGPA and CGPA")
+                    UnlockItem("Auto-synced class routine")
+                }
             }
-            Spacer(modifier = Modifier.height(BubtSpacing.Lg))
-            Row(verticalAlignment = Alignment.CenterVertically) {
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Footer Note
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Icon(
                     imageVector = Icons.Outlined.Lock,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(14.dp)
+                    modifier = Modifier.size(16.dp)
                 )
-                Spacer(modifier = Modifier.width(BubtSpacing.Xs))
+                Spacer(modifier = Modifier.width(6.dp))
                 Text(
                     text = "Encrypted and stored only on this device",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            Spacer(modifier = Modifier.height(BubtSpacing.Xl))
+
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }
@@ -196,12 +244,12 @@ fun AnnexLoginScreen(
 fun AuthErrorBanner(message: String, modifier: Modifier = Modifier) {
     Surface(
         modifier = modifier.fillMaxWidth(),
-        shape = BubtShapes.Field,
+        shape = RoundedCornerShape(12.dp),
         color = MaterialTheme.colorScheme.errorContainer,
         contentColor = MaterialTheme.colorScheme.onErrorContainer
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = BubtSpacing.Md, vertical = BubtSpacing.Md),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
@@ -209,7 +257,7 @@ fun AuthErrorBanner(message: String, modifier: Modifier = Modifier) {
                 contentDescription = null,
                 modifier = Modifier.size(18.dp)
             )
-            Spacer(modifier = Modifier.width(BubtSpacing.Sm))
+            Spacer(modifier = Modifier.width(12.dp))
             Text(text = message, style = MaterialTheme.typography.bodyMedium)
         }
     }
@@ -224,10 +272,10 @@ private fun UnlockItem(text: String) {
             tint = BubtSuccess,
             modifier = Modifier.size(20.dp)
         )
-        Spacer(modifier = Modifier.width(BubtSpacing.Md))
+        Spacer(modifier = Modifier.width(12.dp))
         Text(
             text = text,
-            style = MaterialTheme.typography.bodyLarge,
+            style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurface
         )
     }
@@ -251,5 +299,3 @@ private fun AnnexLoginScreenErrorPreview() {
         )
     }
 }
-
-

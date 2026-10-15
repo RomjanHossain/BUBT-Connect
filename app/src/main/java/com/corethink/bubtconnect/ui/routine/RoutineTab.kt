@@ -18,13 +18,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.outlined.NotificationsNone
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -34,21 +34,19 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.corethink.bubtconnect.data.model.ClassDay
 import com.corethink.bubtconnect.data.model.RoutineSlot
 import com.corethink.bubtconnect.data.repository.SampleAcademicsRepository
-import com.corethink.bubtconnect.ui.components.FilterPill
-import com.corethink.bubtconnect.ui.components.dashedBorder
 import com.corethink.bubtconnect.ui.components.formatClock
-import com.corethink.bubtconnect.ui.components.periodOf
 import com.corethink.bubtconnect.ui.design.BUBTConnectMaterial3Theme
-import com.corethink.bubtconnect.ui.design.BubtShapes
-import com.corethink.bubtconnect.ui.design.BubtSpacing
 import java.util.Calendar
 
 @Composable
@@ -61,7 +59,7 @@ fun RoutineTab(viewModel: RoutineViewModel = viewModel()) {
     )
 }
 
-/** 1g · Class routine. Bell = per-class reminder (filled = on); lead time comes from Profile. */
+/** 1h · Class routine. 6-column week grid + timeline. Matches HTML 1h exactly. */
 @Composable
 fun RoutineContent(
     state: RoutineUiState,
@@ -72,7 +70,6 @@ fun RoutineContent(
         Calendar.getInstance().let { it.get(Calendar.HOUR_OF_DAY) * 60 + it.get(Calendar.MINUTE) }
     }
     val isToday = state.selectedDay == state.today
-    // Day-of-month for each chip, anchored to this week (SAT 10, SUN 11, …).
     val dayDates = remember {
         val todayDow = Calendar.getInstance().get(Calendar.DAY_OF_WEEK)
         val todayIndex = ClassDay.entries.indexOfFirst { it.calendarDay == todayDow }
@@ -85,33 +82,58 @@ fun RoutineContent(
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(bottom = BubtSpacing.Xl)
+        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
+        // 6-Column Week Grid
         item {
-            LazyRow(
-                contentPadding = PaddingValues(horizontal = BubtSpacing.Screen, vertical = BubtSpacing.Md),
-                horizontalArrangement = Arrangement.spacedBy(BubtSpacing.Sm)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                items(ClassDay.entries.size) { index ->
-                    val day = ClassDay.entries[index]
-                    FilterPill(
-                        text = "${day.label.uppercase()} ${dayDates[index]}",
-                        selected = day == state.selectedDay,
-                        onClick = { onSelectDay(day) }
-                    )
+                ClassDay.entries.forEachIndexed { index, day ->
+                    val selected = day == state.selectedDay
+                    Surface(
+                        onClick = { onSelectDay(day) },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(14.dp),
+                        color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainer,
+                        contentColor = if (selected) Color.White else MaterialTheme.colorScheme.onSurface
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(vertical = 8.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
+                            Text(
+                                text = day.label.uppercase(),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = if (selected) Color.White.copy(alpha = 0.85f) else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = "${dayDates[index]}",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 16.sp
+                            )
+                        }
+                    }
                 }
             }
         }
+
         if (state.slots.isEmpty()) {
             item {
                 Text(
                     text = "No classes on ${state.selectedDay.label}.",
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(BubtSpacing.Screen)
+                    modifier = Modifier.padding(vertical = 16.dp)
                 )
             }
         }
+
         items(state.slots.size) { index ->
             val slot = state.slots[index]
             val isNow = isToday && nowMinute in slot.startMinute until slot.endMinute
@@ -119,8 +141,7 @@ fun RoutineContent(
             TimelineRow(
                 startMinute = slot.startMinute,
                 isNow = isNow,
-                isFirst = index == 0,
-                isLast = index == state.slots.lastIndex
+                isPast = isPast
             ) {
                 when (slot) {
                     is RoutineSlot.Class -> ClassCard(
@@ -129,7 +150,6 @@ fun RoutineContent(
                         isPast = isPast,
                         minutesLeft = (slot.endMinute - nowMinute).coerceAtLeast(0),
                         reminderOn = RoutineViewModel.reminderKey(state.selectedDay, slot) in state.reminders,
-                        leadMinutes = state.reminderLeadMinutes,
                         onToggleReminder = { onToggleReminder(slot) }
                     )
                     is RoutineSlot.Break -> BreakCard(minutes = slot.endMinute - slot.startMinute)
@@ -143,58 +163,64 @@ fun RoutineContent(
 private fun TimelineRow(
     startMinute: Int,
     isNow: Boolean,
-    isFirst: Boolean,
-    isLast: Boolean,
+    isPast: Boolean,
     content: @Composable () -> Unit
 ) {
-    val lineColor = MaterialTheme.colorScheme.outline
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .height(IntrinsicSize.Min)
-            .padding(horizontal = BubtSpacing.Screen)
     ) {
-        Column(modifier = Modifier.width(48.dp).padding(top = BubtSpacing.Lg)) {
-            Text(
-                text = formatClock(startMinute),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                text = periodOf(startMinute),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
+        // Time column (44dp)
+        Text(
+            text = formatClock(startMinute),
+            style = MaterialTheme.typography.bodySmall,
+            fontWeight = if (isNow) FontWeight.Bold else FontWeight.Normal,
+            color = if (isNow) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier
+                .width(44.dp)
+                .padding(top = 14.dp)
+        )
+
+        // Line and dot column (16dp)
         Box(
             modifier = Modifier
-                .width(24.dp)
+                .width(16.dp)
                 .fillMaxHeight(),
             contentAlignment = Alignment.TopCenter
         ) {
-            // The rail runs through every row; trimmed above the first marker and below the last.
-            if (!(isFirst && isLast)) {
-                Box(
-                    modifier = Modifier
-                        .padding(top = if (isFirst) 22.dp else 0.dp)
-                        .width(1.5.dp)
-                        .then(if (isLast) Modifier.height(22.dp) else Modifier.fillMaxHeight())
-                        .background(lineColor)
-                )
-            }
+            Box(
+                modifier = Modifier
+                    .width(2.dp)
+                    .fillMaxHeight()
+                    .background(MaterialTheme.colorScheme.outline)
+            )
             Box(
                 modifier = Modifier
                     .padding(top = 16.dp)
-                    .size(12.dp)
+                    .size(if (isNow) 14.dp else 10.dp)
                     .clip(CircleShape)
-                    .background(if (isNow) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface)
-                    .border(1.5.dp, if (isNow) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant, CircleShape)
+                    .background(
+                        when {
+                            isNow -> MaterialTheme.colorScheme.primary
+                            isPast -> MaterialTheme.colorScheme.outline
+                            else -> MaterialTheme.colorScheme.background
+                        }
+                    )
+                    .then(
+                        if (!isNow && !isPast) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
+                        else Modifier
+                    )
             )
         }
+
+        Spacer(modifier = Modifier.width(8.dp))
+
+        // Content
         Box(
             modifier = Modifier
                 .weight(1f)
-                .padding(start = BubtSpacing.Sm, bottom = BubtSpacing.Md)
+                .padding(bottom = 10.dp)
         ) {
             content()
         }
@@ -208,127 +234,133 @@ private fun ClassCard(
     isPast: Boolean,
     minutesLeft: Int,
     reminderOn: Boolean,
-    leadMinutes: Int,
     onToggleReminder: () -> Unit
 ) {
     Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = BubtShapes.Card,
-        color = if (isNow) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
-        contentColor = if (isNow) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
-        border = if (isNow) BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary)
-        else BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+        modifier = Modifier
+            .fillMaxWidth()
+            .graphicsLayer { alpha = if (isPast) 0.6f else 1f },
+        shape = RoundedCornerShape(16.dp),
+        color = if (isNow) MaterialTheme.colorScheme.surface
+        else if (isPast) MaterialTheme.colorScheme.surfaceContainer
+        else MaterialTheme.colorScheme.surface,
+        shadowElevation = if (isNow) 4.dp else 1.dp,
+        border = if (!isNow && !isPast) BorderStroke(1.dp, MaterialTheme.colorScheme.outline) else null
     ) {
-        Row(
-            modifier = Modifier.padding(horizontal = BubtSpacing.CardPadding, vertical = BubtSpacing.Md),
-            verticalAlignment = Alignment.CenterVertically
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = slot.course.title,
                         style = MaterialTheme.typography.titleMedium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false)
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
-                    if (isNow) {
-                        Spacer(modifier = Modifier.width(BubtSpacing.Sm))
-                        Surface(
-                            shape = BubtShapes.Chip,
-                            color = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary
-                        ) {
-                            Text(
-                                text = "NOW",
-                                style = MaterialTheme.typography.labelSmall,
-                                modifier = Modifier.padding(horizontal = BubtSpacing.Sm, vertical = 2.dp)
-                            )
-                        }
-                    }
+                    Text(
+                        text = "${slot.course.code} · ${slot.location}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
-                Text(
-                    text = if (isNow) {
-                        "${slot.course.code} · ${slot.location} · $minutesLeft min left"
-                    } else {
-                        "${slot.course.code} · ${slot.location}"
-                    },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (isNow) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                IconButton(
+                    onClick = onToggleReminder,
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        imageVector = if (reminderOn) Icons.Filled.NotificationsActive else Icons.Outlined.NotificationsNone,
+                        contentDescription = "Toggle reminder",
+                        tint = if (reminderOn) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
-            if (isPast && !isNow) {
+
+            if (isNow) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(11.dp),
+                        color = MaterialTheme.colorScheme.primary,
+                        contentColor = Color.White
+                    ) {
+                        Text(
+                            text = "Now",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 9.dp, vertical = 3.dp)
+                        )
+                    }
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(4.dp)
+                            .clip(RoundedCornerShape(2.dp))
+                            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth(0.35f)
+                                .height(4.dp)
+                                .clip(RoundedCornerShape(2.dp))
+                                .background(MaterialTheme.colorScheme.primary)
+                        )
+                    }
+                    Text(
+                        text = "$minutesLeft min left",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else if (isPast) {
                 Surface(
-                    shape = BubtShapes.Chip,
-                    color = MaterialTheme.colorScheme.surface,
-                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+                    shape = RoundedCornerShape(11.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
                 ) {
                     Text(
                         text = "Done",
-                        style = MaterialTheme.typography.labelMedium,
-                        modifier = Modifier.padding(horizontal = BubtSpacing.Md, vertical = BubtSpacing.Xs)
+                        style = MaterialTheme.typography.labelSmall,
+                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 3.dp)
                     )
                 }
-            } else {
-                ReminderToggle(on = reminderOn, leadMinutes = leadMinutes, onClick = onToggleReminder)
             }
-        }
-    }
-}
-
-@Composable
-private fun ReminderToggle(on: Boolean, leadMinutes: Int, onClick: () -> Unit) {
-    Surface(
-        onClick = onClick,
-        shape = BubtShapes.Skeleton,
-        color = if (on) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
-        contentColor = if (on) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-        border = if (on) null else BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-        modifier = Modifier.size(36.dp)
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            Icon(
-                imageVector = if (on) Icons.Filled.NotificationsActive else Icons.Outlined.NotificationsNone,
-                contentDescription = if (on) "Reminder on, $leadMinutes min before" else "Set reminder",
-                modifier = Modifier.size(18.dp)
-            )
         }
     }
 }
 
 @Composable
 private fun BreakCard(minutes: Int) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .dashedBorder(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f), 16.dp)
-            .padding(horizontal = BubtSpacing.CardPadding, vertical = BubtSpacing.Md)
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceContainer
     ) {
         Text(
             text = "Break · $minutes min",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
         )
     }
 }
 
-@Preview(showBackground = true, heightDp = 700)
+@Preview(showBackground = true)
 @Composable
-private fun RoutineContentPreview() {
+private fun RoutineTabPreview() {
     BUBTConnectMaterial3Theme {
-        Surface(color = MaterialTheme.colorScheme.background) {
-            RoutineContent(
-                state = RoutineUiState(
-                    selectedDay = ClassDay.Mon,
-                    slots = SampleAcademicsRepository.routine(ClassDay.Mon),
-                    reminders = setOf("class:Mon:CSE 231:630")
-                ),
-                onSelectDay = {},
-                onToggleReminder = {}
-            )
-        }
+        RoutineContent(
+            state = RoutineUiState(
+                selectedDay = ClassDay.Sun,
+                today = ClassDay.Sun,
+                slots = SampleAcademicsRepository.routine(ClassDay.Sun)
+            ),
+            onSelectDay = {},
+            onToggleReminder = {}
+        )
     }
 }

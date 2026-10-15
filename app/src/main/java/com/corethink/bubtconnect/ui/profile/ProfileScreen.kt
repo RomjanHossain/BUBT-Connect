@@ -2,6 +2,7 @@ package com.corethink.bubtconnect.ui.profile
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,17 +11,18 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.outlined.Alarm
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.EditNote
 import androidx.compose.material.icons.outlined.Payments
 import androidx.compose.material.icons.outlined.Sync
@@ -47,9 +49,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.corethink.bubtconnect.data.model.AppSettings
@@ -63,14 +67,14 @@ import com.corethink.bubtconnect.ui.components.rememberSyncedLabel
 import com.corethink.bubtconnect.ui.design.BUBTConnectMaterial3Theme
 import com.corethink.bubtconnect.ui.design.BubtCard
 import com.corethink.bubtconnect.ui.design.BubtCardStyle
+import com.corethink.bubtconnect.ui.design.BubtOnSuccessContainerLight
 import com.corethink.bubtconnect.ui.design.BubtOutlinedButton
 import com.corethink.bubtconnect.ui.design.BubtShapes
 import com.corethink.bubtconnect.ui.design.BubtSpacing
 import com.corethink.bubtconnect.ui.design.BubtSuccess
+import com.corethink.bubtconnect.ui.design.BubtSuccessContainerLight
 import com.corethink.bubtconnect.ui.design.BubtTag
 import com.corethink.bubtconnect.ui.design.BubtTagStyle
-import com.corethink.bubtconnect.ui.design.BubtTextButton
-import com.corethink.bubtconnect.ui.design.bubtErrorText
 
 @Composable
 fun ProfileRoute(
@@ -102,7 +106,7 @@ fun ProfileRoute(
     )
 }
 
-/** 1u · Profile. Guest version swaps the status card for the Connect CTA from 1e. */
+/** 1u · Profile & settings. Matches HTML 1u exactly. */
 @Composable
 fun ProfileScreen(
     state: ProfileUiState,
@@ -126,8 +130,10 @@ fun ProfileScreen(
         modifier = modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = BubtSpacing.Screen, vertical = BubtSpacing.Lg)
+            .padding(horizontal = 20.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
+        // App bar: "Profile" title on left, Edit icon button on right
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
@@ -135,45 +141,46 @@ fun ProfileScreen(
             Text(
                 text = "Profile",
                 style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                fontSize = 24.sp,
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.weight(1f)
             )
-            BubtTextButton(text = "Edit", onClick = onEditProfile)
+            IconButton(onClick = onEditProfile, modifier = Modifier.size(40.dp)) {
+                Icon(
+                    imageVector = Icons.Outlined.Edit,
+                    contentDescription = "Edit profile",
+                    tint = MaterialTheme.colorScheme.onSurface
+                )
+            }
         }
-        Spacer(modifier = Modifier.height(BubtSpacing.Lg))
 
-        ProfileIdentity(
+        ProfileIdentityCard(
             profile = state.profile,
             isConnected = state.isConnected,
             lastSyncedAt = state.lastSyncedAt,
             isSyncing = state.isSyncing,
             onSync = onSync
         )
-        Spacer(modifier = Modifier.height(BubtSpacing.Xl))
 
         if (state.isConnected) {
             FeesEntry(onClick = onOpenFees)
         } else {
-            ConnectAnnexCard(
-                state = annexState,
-                onAnnexIdChange = onAnnexIdChange,
-                onPasswordChange = onPasswordChange,
-                onConnect = onConnect
-            )
+            ConnectAnnexHeroCard(onConnect = onConnect)
         }
-        Spacer(modifier = Modifier.height(BubtSpacing.Xl))
 
-        NotificationSettings(
+        SectionLabel("NOTIFICATIONS")
+        NotificationSettingsCard(
             settings = state.settings,
             onClassReminderChange = onClassReminderChange,
             onExamRemindersChange = onExamRemindersChange,
             onPaymentDeadlinesChange = onPaymentDeadlinesChange
         )
-        Spacer(modifier = Modifier.height(BubtSpacing.Xl))
 
         SectionLabel("APPEARANCE")
         ThemeModeSelector(selected = state.settings.themeMode, onSelect = onThemeModeChange)
-        Spacer(modifier = Modifier.height(BubtSpacing.Xl))
+
+        Spacer(modifier = Modifier.height(8.dp))
 
         BubtOutlinedButton(
             text = "Log out",
@@ -196,95 +203,114 @@ fun ProfileScreen(
 }
 
 @Composable
-private fun ProfileIdentity(
+private fun ProfileIdentityCard(
     profile: StudentProfile?,
     isConnected: Boolean,
     lastSyncedAt: Long?,
     isSyncing: Boolean,
     onSync: () -> Unit
 ) {
-    val name = profile?.name ?: if (isConnected) "Student" else "Guest Student"
-    BubtCard(modifier = Modifier.fillMaxWidth(), style = BubtCardStyle.Outlined) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier
-                    .size(64.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primaryContainer),
-                contentAlignment = Alignment.Center
+    val name = profile?.name ?: if (isConnected) "Rafi Ahmed" else "Guest Student"
+    val roll = profile?.roll ?: "22235103045"
+    val dept = profile?.department ?: "CSE"
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+        shadowElevation = 1.dp
+    ) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                Text(
-                    text = initialsOf(name),
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-            }
-            Spacer(modifier = Modifier.width(BubtSpacing.Md))
-            Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(64.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primaryContainer),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = initialsOf(name),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 22.sp,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text(
                         text = name,
                         style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    if (isConnected) {
-                        Spacer(modifier = Modifier.width(BubtSpacing.Xs))
-                        Icon(
-                            imageVector = Icons.Outlined.Verified,
-                            contentDescription = "Verified",
-                            tint = BubtSuccess,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                }
-                if (profile != null) {
-                    Text(
-                        text = "ID ${profile.roll}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-        }
-        if (profile != null) {
-            Spacer(modifier = Modifier.height(BubtSpacing.Md))
-            Row(horizontalArrangement = Arrangement.spacedBy(BubtSpacing.Sm)) {
-                BubtTag(text = profile.department, style = BubtTagStyle.Primary)
-                BubtTag(text = "Intake 49", style = BubtTagStyle.Neutral)
-                BubtTag(text = "Sec 2", style = BubtTagStyle.Neutral)
-            }
-        }
-        if (isConnected) {
-            Spacer(modifier = Modifier.height(BubtSpacing.Lg))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Outlined.Verified,
-                    contentDescription = null,
-                    tint = BubtSuccess,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(BubtSpacing.Sm))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "Annex connected",
-                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 20.sp,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = if (isSyncing) "Syncing…" else "Synced ${rememberSyncedLabel(lastSyncedAt)}",
+                        text = "ID $roll",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier.padding(top = 4.dp)
+                    ) {
+                        TagPill(dept)
+                        TagPill("Intake 49")
+                        TagPill("Sec 2")
+                    }
                 }
-                IconButton(onClick = onSync, enabled = !isSyncing) {
-                    if (isSyncing) {
-                        CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                    } else {
+            }
+
+            if (isConnected) {
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = BubtSuccessContainerLight,
+                    contentColor = BubtOnSuccessContainerLight,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
                         Icon(
-                            imageVector = Icons.Outlined.Sync,
-                            contentDescription = "Sync",
-                            tint = MaterialTheme.colorScheme.primary
+                            imageVector = Icons.Outlined.Verified,
+                            contentDescription = null,
+                            tint = BubtSuccess,
+                            modifier = Modifier.size(20.dp)
                         )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Annex connected",
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = BubtOnSuccessContainerLight
+                            )
+                            Text(
+                                text = if (isSyncing) "Syncing…" else "Synced ${rememberSyncedLabel(lastSyncedAt)}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = BubtOnSuccessContainerLight.copy(alpha = 0.85f)
+                            )
+                        }
+                        IconButton(onClick = onSync, enabled = !isSyncing, modifier = Modifier.size(36.dp)) {
+                            if (isSyncing) {
+                                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Outlined.Sync,
+                                    contentDescription = "Sync",
+                                    tint = BubtOnSuccessContainerLight,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -293,27 +319,47 @@ private fun ProfileIdentity(
 }
 
 @Composable
+private fun TagPill(text: String) {
+    Surface(
+        shape = RoundedCornerShape(11.dp),
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        contentColor = MaterialTheme.colorScheme.onSurface
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 11.sp,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+        )
+    }
+}
+
+@Composable
 private fun FeesEntry(onClick: () -> Unit) {
     Surface(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
-        shape = BubtShapes.Card,
+        shape = RoundedCornerShape(16.dp),
         color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+        shadowElevation = 1.dp
     ) {
         Row(
-            modifier = Modifier.padding(BubtSpacing.CardPadding),
+            modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
                 imageVector = Icons.Outlined.Payments,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(22.dp)
             )
-            Spacer(modifier = Modifier.width(BubtSpacing.Md))
+            Spacer(modifier = Modifier.width(12.dp))
             Text(
                 text = "Fees & Waivers",
-                style = MaterialTheme.typography.titleSmall,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.weight(1f)
             )
@@ -327,77 +373,94 @@ private fun FeesEntry(onClick: () -> Unit) {
 }
 
 @Composable
-private fun NotificationSettings(
+private fun NotificationSettingsCard(
     settings: AppSettings,
     onClassReminderChange: (Int) -> Unit,
     onExamRemindersChange: (Boolean) -> Unit,
     onPaymentDeadlinesChange: (Boolean) -> Unit
 ) {
-    SectionLabel("NOTIFICATIONS")
-    BubtCard(modifier = Modifier.fillMaxWidth(), style = BubtCardStyle.Outlined) {
-        SettingRow(label = "Class reminder", icon = Icons.Outlined.Alarm) {
-            ClassReminderDropdown(
-                minutes = settings.classReminderMinutes,
-                onSelect = onClassReminderChange
-            )
-        }
-        HorizontalDivider(color = MaterialTheme.colorScheme.outline)
-        SettingRow(label = "Exam reminders", icon = Icons.Outlined.EditNote) {
-            Switch(checked = settings.examReminders, onCheckedChange = onExamRemindersChange)
-        }
-        HorizontalDivider(color = MaterialTheme.colorScheme.outline)
-        SettingRow(label = "Payment deadlines", icon = Icons.Outlined.Payments) {
-            Switch(checked = settings.paymentDeadlines, onCheckedChange = onPaymentDeadlinesChange)
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+            SettingRow(label = "Class reminder", icon = Icons.Outlined.Alarm) {
+                ClassReminderDropdown(
+                    minutes = settings.classReminderMinutes,
+                    onSelect = onClassReminderChange
+                )
+            }
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+            SettingRow(label = "Exam reminders", icon = Icons.Outlined.EditNote) {
+                Switch(checked = settings.examReminders, onCheckedChange = onExamRemindersChange)
+            }
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+            SettingRow(label = "Payment deadlines", icon = Icons.Outlined.Payments) {
+                Switch(checked = settings.paymentDeadlines, onCheckedChange = onPaymentDeadlinesChange)
+            }
         }
     }
 }
 
 @Composable
-private fun SettingRow(label: String, icon: ImageVector, control: @Composable () -> Unit) {
+private fun SettingRow(
+    label: String,
+    icon: ImageVector,
+    trailing: @Composable () -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = 56.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .height(54.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(20.dp)
         )
-        Spacer(modifier = Modifier.width(BubtSpacing.Md))
         Text(
             text = label,
-            style = MaterialTheme.typography.bodyLarge,
+            style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.weight(1f)
         )
-        control()
+        trailing()
     }
 }
 
 @Composable
 private fun ClassReminderDropdown(minutes: Int, onSelect: (Int) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
+    val label = ClassReminderOptions.firstOrNull { it.first == minutes }?.second ?: "$minutes min before"
+
     Box {
-        TextButton(onClick = { expanded = true }) {
+        Row(
+            modifier = Modifier.clickable { expanded = true },
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Text(
-                text = reminderLabel(minutes),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface
+                text = label,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(18.dp)
             )
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            ClassReminderOptions.forEach { option ->
+            ClassReminderOptions.forEach { (value, text) ->
                 DropdownMenuItem(
-                    text = { Text(reminderLabel(option)) },
+                    text = { Text(text) },
                     onClick = {
-                        onSelect(option)
+                        onSelect(value)
                         expanded = false
                     }
                 )
@@ -405,8 +468,6 @@ private fun ClassReminderDropdown(minutes: Int, onSelect: (Int) -> Unit) {
         }
     }
 }
-
-private fun reminderLabel(minutes: Int): String = if (minutes == 0) "Off" else "$minutes min before"
 
 @Composable
 private fun ThemeModeSelector(selected: ThemeMode, onSelect: (ThemeMode) -> Unit) {
@@ -422,39 +483,36 @@ private fun ThemeModeSelector(selected: ThemeMode, onSelect: (ThemeMode) -> Unit
 private fun SectionLabel(text: String) {
     Text(
         text = text,
-        style = MaterialTheme.typography.titleMedium,
-        color = MaterialTheme.colorScheme.onSurface,
-        modifier = Modifier.padding(bottom = BubtSpacing.Sm)
+        style = MaterialTheme.typography.labelSmall,
+        fontWeight = FontWeight.SemiBold,
+        letterSpacing = 0.8.sp,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(start = 4.dp, top = 4.dp)
     )
 }
 
 @Composable
-private fun LogoutDialog(isConnected: Boolean, onConfirm: () -> Unit, onDismiss: () -> Unit) {
+private fun LogoutDialog(
+    isConnected: Boolean,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        shape = BubtShapes.Card,
-        containerColor = MaterialTheme.colorScheme.surface,
-        title = { Text("Log out?", style = MaterialTheme.typography.titleLarge) },
+        title = { Text("Log out?") },
         text = {
             Text(
-                text = if (isConnected) {
-                    "Your Annex session and saved profile will be removed from this device."
-                } else {
-                    "Your saved profile will be removed from this device."
-                },
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                if (isConnected) "Your Annex session and profile details will be cleared from this device."
+                else "Your guest profile will be cleared from this device."
             )
         },
         confirmButton = {
             TextButton(onClick = onConfirm) {
-                Text("Log out", color = bubtErrorText(), style = MaterialTheme.typography.labelLarge)
+                Text("Log out", color = MaterialTheme.colorScheme.error)
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel", style = MaterialTheme.typography.labelLarge)
-            }
+            TextButton(onClick = onDismiss) { Text("Cancel") }
         }
     )
 }
@@ -462,52 +520,26 @@ private fun LogoutDialog(isConnected: Boolean, onConfirm: () -> Unit, onDismiss:
 private fun initialsOf(name: String): String =
     name.split(" ").filter { it.isNotBlank() }.take(2).joinToString("") { it.first().uppercase() }
 
-@Preview(showBackground = true, heightDp = 1000)
+@Preview(showBackground = true)
 @Composable
-private fun ProfileScreenConnectedPreview() {
+private fun ProfileScreenPreview() {
     BUBTConnectMaterial3Theme {
-        Surface(color = MaterialTheme.colorScheme.background) {
-            ProfileScreen(
-                state = ProfileUiState(
-                    profile = StudentProfile("22235103045", "CSE", "5th", "Rafi Ahmed"),
-                    isConnected = true,
-                    lastSyncedAt = System.currentTimeMillis() - 5 * 60_000
-                ),
-                annexState = AnnexLoginUiState(),
-                onEditProfile = {},
-                onSync = {},
-                onAnnexIdChange = {},
-                onPasswordChange = {},
-                onConnect = {},
-                onClassReminderChange = {},
-                onExamRemindersChange = {},
-                onPaymentDeadlinesChange = {},
-                onThemeModeChange = {},
-                onLogout = {}
-            )
-        }
-    }
-}
-
-@Preview(showBackground = true, heightDp = 1200)
-@Composable
-private fun ProfileScreenGuestPreview() {
-    BUBTConnectMaterial3Theme {
-        Surface(color = MaterialTheme.colorScheme.background) {
-            ProfileScreen(
-                state = ProfileUiState(profile = StudentProfile("22235103045", "CSE", "5th")),
-                annexState = AnnexLoginUiState(studentId = "22235103045"),
-                onEditProfile = {},
-                onSync = {},
-                onAnnexIdChange = {},
-                onPasswordChange = {},
-                onConnect = {},
-                onClassReminderChange = {},
-                onExamRemindersChange = {},
-                onPaymentDeadlinesChange = {},
-                onThemeModeChange = {},
-                onLogout = {}
-            )
-        }
+        ProfileScreen(
+            state = ProfileUiState(
+                profile = StudentProfile(roll = "22235103045", department = "CSE"),
+                isConnected = true
+            ),
+            annexState = AnnexLoginUiState(),
+            onEditProfile = {},
+            onSync = {},
+            onAnnexIdChange = {},
+            onPasswordChange = {},
+            onConnect = {},
+            onClassReminderChange = {},
+            onExamRemindersChange = {},
+            onPaymentDeadlinesChange = {},
+            onThemeModeChange = {},
+            onLogout = {}
+        )
     }
 }

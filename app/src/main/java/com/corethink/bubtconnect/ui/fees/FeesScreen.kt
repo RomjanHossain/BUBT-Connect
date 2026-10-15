@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -26,6 +25,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Download
+import androidx.compose.material.icons.outlined.Event
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.ReceiptLong
 import androidx.compose.material.icons.outlined.Savings
@@ -50,6 +50,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.corethink.bubtconnect.data.model.FeeStatement
@@ -60,10 +61,10 @@ import com.corethink.bubtconnect.ui.components.formatTaka
 import com.corethink.bubtconnect.ui.components.rememberSyncedLabel
 import com.corethink.bubtconnect.ui.components.showNotAvailableYet
 import com.corethink.bubtconnect.ui.design.BUBTConnectMaterial3Theme
+import com.corethink.bubtconnect.ui.design.BubtOnSuccessContainerLight
 import com.corethink.bubtconnect.ui.design.BubtPrimaryButton
-import com.corethink.bubtconnect.ui.design.BubtShapes
 import com.corethink.bubtconnect.ui.design.BubtSpacing
-import com.corethink.bubtconnect.ui.design.BubtSuccess
+import com.corethink.bubtconnect.ui.design.BubtSuccessContainerLight
 import com.corethink.bubtconnect.ui.design.BubtTextButton
 import com.corethink.bubtconnect.ui.onboarding.OnboardingTopBar
 
@@ -86,7 +87,7 @@ fun FeesRoute(
     )
 }
 
-/** 1v · Fees & waivers. ⓘ opens a sheet explaining each line. Requires Annex. */
+/** 1v · Fees & waivers. Matches HTML 1v exactly. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FeesScreen(
@@ -108,15 +109,20 @@ fun FeesScreen(
             OnboardingTopBar(
                 title = "Fees & Waivers",
                 onBack = onBack,
-                modifier = Modifier.padding(horizontal = BubtSpacing.Screen),
+                modifier = Modifier.padding(horizontal = 20.dp),
                 trailing = {
                     if (state.isConnected) {
                         IconButton(onClick = { onInfoVisibleChange(true) }) {
-                            Icon(Icons.Outlined.Info, contentDescription = "What each line means")
+                            Icon(
+                                Icons.Outlined.Info,
+                                contentDescription = "What each line means",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
                 }
             )
+
             val statement = state.selected
             if (!state.isConnected || statement == null) {
                 LockedFeature(
@@ -133,8 +139,8 @@ fun FeesScreen(
                     .verticalScroll(rememberScrollState())
             ) {
                 LazyRow(
-                    contentPadding = PaddingValues(horizontal = BubtSpacing.Screen, vertical = BubtSpacing.Sm),
-                    horizontalArrangement = Arrangement.spacedBy(BubtSpacing.Sm)
+                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(state.statements.size) { index ->
                         FilterPill(
@@ -144,20 +150,38 @@ fun FeesScreen(
                         )
                     }
                 }
+
                 Column(
-                    modifier = Modifier.padding(horizontal = BubtSpacing.Screen),
-                    verticalArrangement = Arrangement.spacedBy(BubtSpacing.Md)
+                    modifier = Modifier.padding(horizontal = 20.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     CurrentDueCard(statement)
                     BreakdownCard(statement)
-                    SyncedRow(state.lastSyncedAt)
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier.padding(top = 4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Sync,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text(
+                            text = "Synced from Annex · ${rememberSyncedLabel(state.lastSyncedAt)}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
 
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = BubtSpacing.Screen, vertical = BubtSpacing.Md),
+                    .padding(horizontal = 20.dp, vertical = 12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 BubtPrimaryButton(
@@ -166,7 +190,14 @@ fun FeesScreen(
                     leadingIcon = Icons.Outlined.Download,
                     modifier = Modifier.fillMaxWidth()
                 )
-                BubtTextButton(text = "Payment Instructions", onClick = onPaymentInstructions)
+                Spacer(modifier = Modifier.height(4.dp))
+                BubtTextButton(
+                    text = "Payment Instructions",
+                    onClick = onPaymentInstructions,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(44.dp)
+                )
             }
         }
     }
@@ -179,14 +210,95 @@ fun FeesScreen(
 }
 
 @Composable
+private fun CurrentDueCard(statement: FeeStatement) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.primary,
+        contentColor = Color.White
+    ) {
+        Box {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .offset(x = 40.dp, y = (-50).dp)
+                    .size(150.dp)
+                    .background(Color.White.copy(alpha = 0.1f), CircleShape)
+            )
+
+            Column(
+                modifier = Modifier.padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(
+                    text = "CURRENT DUE",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.White.copy(alpha = 0.85f)
+                )
+                Text(
+                    text = formatTaka(statement.currentDue),
+                    style = MaterialTheme.typography.headlineLarge,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 38.sp,
+                    lineHeight = 42.sp,
+                    color = Color.White
+                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.padding(top = 6.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Event,
+                        contentDescription = null,
+                        tint = Color.White.copy(alpha = 0.9f),
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = "Due by 31 Oct · 20 days left",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.White.copy(alpha = 0.9f)
+                    )
+                }
+
+                Box(
+                    modifier = Modifier
+                        .padding(top = 12.dp)
+                        .fillMaxWidth()
+                        .height(6.dp)
+                        .clip(RoundedCornerShape(3.dp))
+                        .background(Color.White.copy(alpha = 0.25f))
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(0.68f)
+                            .height(6.dp)
+                            .clip(RoundedCornerShape(3.dp))
+                            .background(Color.White)
+                    )
+                }
+
+                Text(
+                    text = "68% of net payable cleared",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.White.copy(alpha = 0.9f),
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun BreakdownCard(statement: FeeStatement) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = BubtShapes.Card,
+        shape = RoundedCornerShape(16.dp),
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
     ) {
-        Column(modifier = Modifier.padding(horizontal = BubtSpacing.CardPadding)) {
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
             FeeLine(
                 icon = Icons.Outlined.ReceiptLong,
                 tileColor = MaterialTheme.colorScheme.surfaceContainer,
@@ -198,18 +310,18 @@ private fun BreakdownCard(statement: FeeStatement) {
             HorizontalDivider(color = MaterialTheme.colorScheme.outline)
             FeeLine(
                 icon = Icons.Outlined.Sell,
-                tileColor = MaterialTheme.colorScheme.tertiaryContainer,
-                tint = MaterialTheme.colorScheme.onTertiaryContainer,
+                tileColor = BubtSuccessContainerLight,
+                tint = BubtOnSuccessContainerLight,
                 label = "Waiver",
                 caption = statement.waiverLabel,
-                amount = "– ${formatTaka(statement.waiver)}",
-                amountColor = MaterialTheme.colorScheme.onTertiaryContainer
+                amount = "− ${formatTaka(statement.waiver)}",
+                amountColor = BubtOnSuccessContainerLight
             )
             HorizontalDivider(color = MaterialTheme.colorScheme.outline)
             FeeLine(
                 icon = Icons.Outlined.CheckCircle,
                 tileColor = MaterialTheme.colorScheme.primaryContainer,
-                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                tint = MaterialTheme.colorScheme.primary,
                 label = "Paid",
                 caption = "${statement.installments} installments",
                 amount = formatTaka(statement.paid)
@@ -221,8 +333,7 @@ private fun BreakdownCard(statement: FeeStatement) {
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 label = "Overpaid",
                 caption = "Carried to next semester",
-                amount = formatTaka(statement.overpaid),
-                amountColor = MaterialTheme.colorScheme.onSurfaceVariant
+                amount = formatTaka(statement.overpaid)
             )
         }
     }
@@ -234,7 +345,7 @@ private fun FeeLine(
     tileColor: Color,
     tint: Color,
     label: String,
-    caption: String?,
+    caption: String,
     amount: String,
     amountColor: Color = MaterialTheme.colorScheme.onSurface
 ) {
@@ -242,7 +353,8 @@ private fun FeeLine(
         modifier = Modifier
             .fillMaxWidth()
             .height(58.dp),
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Box(
             modifier = Modifier
@@ -251,164 +363,69 @@ private fun FeeLine(
                 .background(tileColor),
             contentAlignment = Alignment.Center
         ) {
-            Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(18.dp))
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = tint,
+                modifier = Modifier.size(18.dp)
+            )
         }
-        Spacer(modifier = Modifier.width(BubtSpacing.Md))
-        Column(modifier = Modifier.weight(1f)) {
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(1.dp)
+        ) {
             Text(
                 text = label,
-                style = MaterialTheme.typography.labelLarge,
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface
             )
-            caption?.let {
-                Text(
-                    text = it,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-        Spacer(modifier = Modifier.width(BubtSpacing.Sm))
-        Text(text = amount, style = MaterialTheme.typography.titleSmall, color = amountColor)
-    }
-}
-
-/** Solid-primary hero that flips to success green and reads "Credit" when overpaid (1v). */
-@Composable
-private fun CurrentDueCard(statement: FeeStatement) {
-    val credit = statement.overpaid > 0
-    val settled = statement.currentDue == 0 && !credit
-    val container = when {
-        credit -> BubtSuccess
-        settled -> MaterialTheme.colorScheme.surfaceContainer
-        else -> MaterialTheme.colorScheme.primary
-    }
-    val onContainer = when {
-        credit -> Color.White
-        settled -> MaterialTheme.colorScheme.onSurface
-        else -> MaterialTheme.colorScheme.onPrimary
-    }
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        color = container,
-        contentColor = onContainer
-    ) {
-        Box {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .offset(x = 50.dp, y = (-60).dp)
-                    .size(150.dp)
-                    .background(onContainer.copy(alpha = 0.1f), CircleShape)
+            Text(
+                text = caption,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Column(modifier = Modifier.padding(20.dp)) {
-                Text(
-                    text = when {
-                        credit -> "CREDIT"
-                        settled -> "SETTLED"
-                        else -> "CURRENT DUE"
-                    },
-                    style = MaterialTheme.typography.labelMedium,
-                    color = onContainer.copy(alpha = 0.85f)
-                )
-                Text(
-                    text = formatTaka(if (credit) statement.overpaid else statement.currentDue),
-                    style = MaterialTheme.typography.displaySmall,
-                    fontWeight = FontWeight.Bold
-                )
-                val dueInDays = statement.dueDate.daysUntil()
-                Text(
-                    text = when {
-                        credit -> "Carried to next semester"
-                        settled -> "Nothing due this semester"
-                        dueInDays >= 0 -> "Due by ${statement.dueDate.day} ${statement.dueDate.monthShort} · $dueInDays days left"
-                        else -> "Was due ${statement.dueDate.day} ${statement.dueDate.monthShort}"
-                    },
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = onContainer.copy(alpha = 0.9f),
-                    modifier = Modifier.padding(top = BubtSpacing.Xs)
-                )
-                Spacer(modifier = Modifier.height(BubtSpacing.Md))
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(6.dp)
-                        .clip(CircleShape)
-                        .background(onContainer.copy(alpha = 0.25f))
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth(statement.percentCleared / 100f)
-                            .fillMaxHeight()
-                            .clip(CircleShape)
-                            .background(onContainer)
-                    )
-                }
-                Text(
-                    text = "${statement.percentCleared}% of net payable cleared",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = onContainer.copy(alpha = 0.9f),
-                    modifier = Modifier.padding(top = BubtSpacing.Sm)
-                )
-            }
         }
-    }
-}
-
-@Composable
-private fun SyncedRow(lastSyncedAt: Long?) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(BubtSpacing.Xs)
-    ) {
-        Icon(
-            imageVector = Icons.Outlined.Sync,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(16.dp)
-        )
         Text(
-            text = rememberSyncedLabel(lastSyncedAt).replace("Synced", "Synced from Annex ·"),
+            text = amount,
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            fontWeight = FontWeight.SemiBold,
+            color = amountColor
         )
     }
 }
 
 @Composable
 private fun FeeInfoSheet() {
-    val lines = listOf(
-        "Total Demand" to "Everything billed for the semester: base tuition plus semester, lab and other fees.",
-        "Waiver" to "Scholarships or discounts (merit, sibling, etc.) deducted from the demand.",
-        "Paid" to "Payments received so far for this semester.",
-        "Overpaid" to "Anything paid beyond the net amount. It's carried forward as credit.",
-        "Current Due" to "Total Demand − Waiver − Paid, payable by the date shown."
-    )
     Column(
-        modifier = Modifier.padding(start = BubtSpacing.Screen, end = BubtSpacing.Screen, bottom = BubtSpacing.Xl),
-        verticalArrangement = Arrangement.spacedBy(BubtSpacing.Md)
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp, vertical = 20.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Text("What each line means", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
-        lines.forEach { (title, body) ->
-            Column {
-                Text(title, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
-                Text(body, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
-        Spacer(modifier = Modifier.height(BubtSpacing.Sm))
+        Text(
+            text = "Fee breakdown explained",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Text(
+            text = "Current Due = Total Demand − Waiver − Paid. Overpaid fees, if any, carry forward to your next semester demand.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.height(12.dp))
     }
 }
 
-@Preview(showBackground = true, heightDp = 800)
+@Preview(showBackground = true)
 @Composable
 private fun FeesScreenPreview() {
     BUBTConnectMaterial3Theme {
         FeesScreen(
             state = FeesUiState(
                 isConnected = true,
-                statements = SampleAcademicsRepository.feeStatements(),
-                lastSyncedAt = System.currentTimeMillis() - 5 * 60_000
+                statements = SampleAcademicsRepository.feeStatements()
             ),
             onBack = {},
             onConnectAnnex = {},

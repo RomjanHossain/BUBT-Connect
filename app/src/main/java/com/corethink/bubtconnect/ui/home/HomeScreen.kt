@@ -22,10 +22,10 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AccessTime
-import androidx.compose.material.icons.outlined.Assessment
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.DocumentScanner
 import androidx.compose.material.icons.automirrored.outlined.EventNote
@@ -48,9 +48,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.corethink.bubtconnect.data.model.Course
@@ -59,12 +61,17 @@ import com.corethink.bubtconnect.data.repository.SampleDashboardRepository
 import com.corethink.bubtconnect.ui.design.BUBTConnectMaterial3Theme
 import com.corethink.bubtconnect.ui.design.BubtChip
 import com.corethink.bubtconnect.ui.design.BubtError
+import com.corethink.bubtconnect.ui.design.BubtErrorContainerLight
+import com.corethink.bubtconnect.ui.design.BubtOnErrorContainerLight
+import com.corethink.bubtconnect.ui.design.BubtOnSuccessContainerLight
+import com.corethink.bubtconnect.ui.design.BubtOnWarningContainerLight
 import com.corethink.bubtconnect.ui.design.BubtPagerIndicator
+import com.corethink.bubtconnect.ui.design.BubtPrimaryContainerLight
 import com.corethink.bubtconnect.ui.design.BubtPrimaryLight
 import com.corethink.bubtconnect.ui.design.BubtShapes
 import com.corethink.bubtconnect.ui.design.BubtSpacing
-import com.corethink.bubtconnect.ui.design.BubtSuccess
-import com.corethink.bubtconnect.ui.design.BubtWarning
+import com.corethink.bubtconnect.ui.design.BubtSuccessContainerLight
+import com.corethink.bubtconnect.ui.design.BubtWarningContainerLight
 import java.util.Calendar
 import java.util.Locale
 
@@ -72,12 +79,13 @@ enum class QuickAction(
     val label: String,
     val icon: ImageVector,
     val needsAnnex: Boolean = false,
-    val tint: Color
+    val containerColor: Color,
+    val contentColor: Color
 ) {
-    ScanDocument("Scan Document", Icons.Outlined.DocumentScanner, tint = BubtPrimaryLight),
-    ViewRoutine("View Routine", Icons.Outlined.ViewTimeline, tint = BubtSuccess),
-    CheckResult("Check Result", Icons.Outlined.School, needsAnnex = true, tint = BubtWarning),
-    AcademicCalendar("Academic Calendar", Icons.Outlined.CalendarMonth, tint = BubtError)
+    ScanDocument("Scan Document", Icons.Outlined.DocumentScanner, containerColor = BubtPrimaryContainerLight, contentColor = BubtPrimaryLight),
+    ViewRoutine("View Routine", Icons.Outlined.ViewTimeline, containerColor = BubtSuccessContainerLight, contentColor = BubtOnSuccessContainerLight),
+    CheckResult("Check Result", Icons.Outlined.School, needsAnnex = true, containerColor = BubtWarningContainerLight, contentColor = BubtOnWarningContainerLight),
+    AcademicCalendar("Academic Calendar", Icons.Outlined.CalendarMonth, containerColor = BubtErrorContainerLight, contentColor = BubtOnErrorContainerLight)
 }
 
 @Composable
@@ -97,14 +105,13 @@ fun HomeRoute(
         onCourseClick = onCourseClick,
         onSeeAll = onSeeAll,
         onHighlightClick = onHighlightClick,
-        // Guest mode: locked actions open Annex login (1e) instead.
         onQuickAction = { action ->
             if (action.needsAnnex && state.isGuest) onConnectAnnex() else onQuickAction(action)
         }
     )
 }
 
-/** 1g · Dashboard. Bell opens notifications. */
+/** 1g · Dashboard. Matches HTML 1g exactly. */
 @Composable
 fun HomeScreen(
     state: HomeUiState,
@@ -128,26 +135,34 @@ fun HomeScreen(
             onNotifications = onNotifications,
             modifier = Modifier.padding(horizontal = BubtSpacing.Screen)
         )
-        Spacer(modifier = Modifier.height(BubtSpacing.Xl))
+        Spacer(modifier = Modifier.height(14.dp))
 
         SectionHeader(title = "Present Courses", actionLabel = "See all", onAction = onSeeAll)
         LazyRow(
             contentPadding = PaddingValues(horizontal = BubtSpacing.Screen),
-            horizontalArrangement = Arrangement.spacedBy(BubtSpacing.Sm)
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            items(state.courses, key = { it.code }) { course ->
+            val colors = listOf(
+                Color(0xFF2563EB),
+                Color(0xFF10B981),
+                Color(0xFFF59E0B),
+                Color(0xFFA855F7),
+                Color(0xFFEF4444)
+            )
+            items(state.courses.size) { index ->
+                val course = state.courses[index]
                 BubtChip(
                     text = course.code,
                     onClick = { onCourseClick(course) },
-                    leadingDot = MaterialTheme.colorScheme.primary
+                    leadingDot = colors[index % colors.size]
                 )
             }
         }
-        Spacer(modifier = Modifier.height(BubtSpacing.Lg))
+        Spacer(modifier = Modifier.height(14.dp))
 
         if (state.highlights.isNotEmpty()) {
             HighlightsCarousel(highlights = state.highlights, onClick = onHighlightClick)
-            Spacer(modifier = Modifier.height(BubtSpacing.Xl))
+            Spacer(modifier = Modifier.height(14.dp))
         }
 
         SectionHeader(title = "Quick actions")
@@ -170,18 +185,19 @@ private fun HomeHeader(
     Row(modifier = modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Box(
             modifier = Modifier
-                .size(52.dp)
+                .size(44.dp)
                 .clip(CircleShape)
                 .background(MaterialTheme.colorScheme.primaryContainer),
             contentAlignment = Alignment.Center
         ) {
             Text(
                 text = initialsOf(name),
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onPrimaryContainer
             )
         }
-        Spacer(modifier = Modifier.width(BubtSpacing.Md))
+        Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             if (bengaliLine.isNotBlank()) {
                 Text(
@@ -193,6 +209,7 @@ private fun HomeHeader(
             Text(
                 text = "${greeting.removeSuffix(",")} $name",
                 style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -201,10 +218,9 @@ private fun HomeHeader(
         Box {
             Surface(
                 onClick = onNotifications,
-                shape = BubtShapes.Field,
-                color = MaterialTheme.colorScheme.surface,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                modifier = Modifier.size(44.dp)
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.surfaceContainer,
+                modifier = Modifier.size(40.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
@@ -218,7 +234,7 @@ private fun HomeHeader(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .padding(top = 8.dp, end = 8.dp)
-                    .size(9.dp)
+                    .size(8.dp)
                     .clip(CircleShape)
                     .background(BubtError)
             )
@@ -231,24 +247,26 @@ private fun SectionHeader(title: String, actionLabel: String? = null, onAction: 
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = BubtSpacing.Screen, vertical = BubtSpacing.Md),
+            .padding(horizontal = BubtSpacing.Screen, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
             text = title,
             style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.weight(1f)
         )
         if (actionLabel != null) {
             Text(
                 text = actionLabel,
-                style = MaterialTheme.typography.labelMedium,
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.Medium,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier
                     .clip(BubtShapes.Chip)
                     .clickable(onClick = onAction)
-                    .padding(horizontal = BubtSpacing.Xs, vertical = BubtSpacing.Xs)
+                    .padding(horizontal = 4.dp, vertical = 4.dp)
             )
         }
     }
@@ -262,12 +280,12 @@ private fun HighlightsCarousel(highlights: List<DashboardHighlight>, onClick: (D
         HorizontalPager(
             state = pagerState,
             contentPadding = PaddingValues(horizontal = BubtSpacing.Screen),
-            pageSpacing = BubtSpacing.Md,
+            pageSpacing = 10.dp,
             modifier = Modifier.fillMaxWidth()
         ) { page ->
             HighlightCard(highlights[page], onClick = { onClick(highlights[page]) })
         }
-        Spacer(modifier = Modifier.height(BubtSpacing.Md))
+        Spacer(modifier = Modifier.height(10.dp))
         BubtPagerIndicator(count = highlights.size, selected = pagerState.currentPage)
     }
 }
@@ -285,9 +303,10 @@ private fun HighlightCard(highlight: DashboardHighlight, onClick: () -> Unit) {
             ).joinToString(" · ")
             HighlightSurface(
                 onClick = onClick,
-                container = colors.primaryContainer,
-                content = colors.onPrimaryContainer,
-                eyebrow = "Next class · in ${formatDuration(minutesUntil)}",
+                container = colors.surface,
+                content = colors.onSurface,
+                eyebrow = "NEXT CLASS",
+                eyebrowTrailing = "in $minutesUntil min",
                 title = highlight.course.title,
                 subtitle = subtitle,
                 trailingIcon = Icons.Outlined.NotificationsActive,
@@ -299,9 +318,10 @@ private fun HighlightCard(highlight: DashboardHighlight, onClick: () -> Unit) {
         }
         is DashboardHighlight.ExamAlert -> HighlightSurface(
             onClick = onClick,
-            container = colors.tertiaryContainer,
-            content = colors.onTertiaryContainer,
-            eyebrow = "Exam alert · ${highlight.examName}",
+            container = colors.surface,
+            content = colors.onSurface,
+            eyebrow = "EXAM ALERT",
+            eyebrowTrailing = highlight.examName,
             title = "${highlight.course.code} · ${highlight.course.title}",
             lines = listOf(
                 Icons.AutoMirrored.Outlined.EventNote to highlight.date,
@@ -310,9 +330,10 @@ private fun HighlightCard(highlight: DashboardHighlight, onClick: () -> Unit) {
         )
         is DashboardHighlight.PaymentDue -> HighlightSurface(
             onClick = onClick,
-            container = colors.errorContainer,
-            content = colors.onErrorContainer,
-            eyebrow = "Payment due · ${highlight.dueDate}",
+            container = colors.surface,
+            content = colors.onSurface,
+            eyebrow = "PAYMENT DUE",
+            eyebrowTrailing = highlight.dueDate,
             title = highlight.title,
             lines = listOf(
                 Icons.Outlined.Payments to "৳ ${String.format(Locale.US, "%,d", highlight.amountTaka)}"
@@ -327,6 +348,7 @@ private fun HighlightSurface(
     container: Color,
     content: Color,
     eyebrow: String,
+    eyebrowTrailing: String,
     title: String,
     lines: List<Pair<ImageVector, String>>,
     subtitle: String? = null,
@@ -334,69 +356,130 @@ private fun HighlightSurface(
 ) {
     Surface(
         onClick = onClick,
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = 140.dp),
-        shape = BubtShapes.Card,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
         color = container,
-        contentColor = content
+        contentColor = content,
+        shadowElevation = 4.dp
     ) {
-        Column(modifier = Modifier.padding(BubtSpacing.CardPadding)) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = eyebrow.uppercase(),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = content.copy(alpha = 0.8f),
-                    modifier = Modifier.weight(1f)
-                )
-                if (trailingIcon != null) {
-                    Icon(imageVector = trailingIcon, contentDescription = "Reminder on", modifier = Modifier.size(20.dp))
+                Surface(
+                    shape = RoundedCornerShape(11.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                ) {
+                    Text(
+                        text = eyebrow,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp)
+                    )
                 }
-            }
-            Spacer(modifier = Modifier.height(BubtSpacing.Xs))
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleLarge,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            if (subtitle != null) {
-                Spacer(modifier = Modifier.height(2.dp))
+                Spacer(modifier = Modifier.weight(1f))
                 Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = content.copy(alpha = 0.8f),
+                    text = eyebrowTrailing,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 20.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
+                if (subtitle != null) {
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
-            Spacer(modifier = Modifier.height(BubtSpacing.Md))
-            lines.forEach { (icon, text) ->
-                Row(
-                    modifier = Modifier.padding(vertical = 2.dp),
-                    verticalAlignment = Alignment.CenterVertically
+
+            Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
+                lines.forEach { (icon, text) ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Text(
+                            text = text,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+            }
+
+            // Timeline Progress bar row
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(6.dp)
+                        .clip(RoundedCornerShape(3.dp))
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh)
                 ) {
-                    Icon(imageVector = icon, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(BubtSpacing.Sm))
-                    Text(text = text, style = MaterialTheme.typography.bodyMedium)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(0.7f)
+                            .height(6.dp)
+                            .clip(RoundedCornerShape(3.dp))
+                            .background(MaterialTheme.colorScheme.primary)
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primaryContainer),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.NotificationsActive,
+                        contentDescription = "Active reminder",
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
             }
         }
     }
 }
 
-// ------------------------------------------------------------- quick actions
+// ------------------------------------------------------------- quick actions (1g horizontal rows)
 @Composable
 private fun QuickActionsGrid(
     isGuest: Boolean,
     onQuickAction: (QuickAction) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(BubtSpacing.Md)) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(10.dp)) {
         QuickAction.entries.chunked(2).forEach { row ->
-            Row(horizontalArrangement = Arrangement.spacedBy(BubtSpacing.Md)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 row.forEach { action ->
-                    QuickActionTile(
+                    QuickActionRowTile(
                         action = action,
                         locked = action.needsAnnex && isGuest,
                         onClick = { onQuickAction(action) },
@@ -408,8 +491,9 @@ private fun QuickActionsGrid(
     }
 }
 
+/** Tonal Row Tile matching `1g` Quick Actions in Student App UI.dc.html exactly (`tonal r`). */
 @Composable
-private fun QuickActionTile(
+private fun QuickActionRowTile(
     action: QuickAction,
     locked: Boolean,
     onClick: () -> Unit,
@@ -418,50 +502,45 @@ private fun QuickActionTile(
     Surface(
         onClick = onClick,
         modifier = modifier,
-        shape = BubtShapes.Card,
+        shape = RoundedCornerShape(16.dp),
         color = MaterialTheme.colorScheme.surfaceContainer
     ) {
-        Column(modifier = Modifier.padding(BubtSpacing.CardPadding)) {
-            Row(verticalAlignment = Alignment.Top) {
-                Box(
-                    modifier = Modifier
-                        .size(44.dp)
-                        .clip(BubtShapes.Field)
-                        .background(action.tint.copy(alpha = 0.14f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = action.icon,
-                        contentDescription = null,
-                        tint = action.tint
-                    )
-                }
-                Spacer(modifier = Modifier.weight(1f))
-                if (locked) {
-                    Box(
-                        modifier = Modifier
-                            .size(24.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Lock,
-                            contentDescription = "Requires Annex login",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(14.dp)
-                        )
-                    }
-                }
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(action.containerColor),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = action.icon,
+                    contentDescription = null,
+                    tint = action.contentColor,
+                    modifier = Modifier.size(22.dp)
+                )
             }
-            Spacer(modifier = Modifier.height(BubtSpacing.Lg))
             Text(
                 text = action.label,
-                style = MaterialTheme.typography.titleSmall,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
             )
+            if (locked) {
+                Icon(
+                    imageVector = Icons.Outlined.Lock,
+                    contentDescription = "Requires Annex",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
         }
     }
 }
@@ -476,9 +555,6 @@ private fun minutesUntil(startMinuteOfDay: Int): Int {
     return (startMinuteOfDay - nowMinute + 24 * 60) % (24 * 60)
 }
 
-private fun formatDuration(minutes: Int): String =
-    if (minutes < 60) "$minutes min" else "${minutes / 60} h ${minutes % 60} min"
-
 private fun formatClock(minuteOfDay: Int): Pair<String, String> {
     val hour24 = minuteOfDay / 60
     val hour12 = if (hour24 % 12 == 0) 12 else hour24 % 12
@@ -486,7 +562,6 @@ private fun formatClock(minuteOfDay: Int): Pair<String, String> {
     return String.format(Locale.US, "%d:%02d", hour12, minuteOfDay % 60) to period
 }
 
-/** "10:30 – 11:45 AM", or "11:30 AM – 12:45 PM" when the period changes. */
 private fun formatTimeRange(start: Int, end: Int): String {
     val (startTime, startPeriod) = formatClock(start)
     val (endTime, endPeriod) = formatClock(end)

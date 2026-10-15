@@ -1,6 +1,7 @@
 package com.corethink.bubtconnect.ui.exams
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -14,12 +15,14 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.EventBusy
 import androidx.compose.material.icons.outlined.NotificationsNone
+import androidx.compose.material.icons.outlined.PictureAsPdf
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -29,9 +32,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.corethink.bubtconnect.data.model.Exam
@@ -43,10 +48,11 @@ import com.corethink.bubtconnect.ui.components.EmptyIllustration
 import com.corethink.bubtconnect.ui.components.EmptyState
 import com.corethink.bubtconnect.ui.components.showNotAvailableYet
 import com.corethink.bubtconnect.ui.design.BUBTConnectMaterial3Theme
+import com.corethink.bubtconnect.ui.design.BubtOnSuccessContainerLight
 import com.corethink.bubtconnect.ui.design.BubtOutlinedButton
-import com.corethink.bubtconnect.ui.design.BubtPrimaryButton
-import com.corethink.bubtconnect.ui.design.BubtShapes
 import com.corethink.bubtconnect.ui.design.BubtSpacing
+import com.corethink.bubtconnect.ui.design.BubtSuccessContainerLight
+import com.corethink.bubtconnect.ui.design.BubtTonalButton
 
 @Composable
 fun ExamsTab(viewModel: ExamsViewModel = viewModel()) {
@@ -62,7 +68,7 @@ fun ExamsTab(viewModel: ExamsViewModel = viewModel()) {
     )
 }
 
-/** 1i · Exam routine. Reminder button flips to the filled "Reminder set" state. */
+/** 1i · Exam routine. Matches HTML 1i exactly. */
 @Composable
 fun ExamsContent(
     state: ExamsUiState,
@@ -74,8 +80,8 @@ fun ExamsContent(
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = BubtSpacing.Screen, vertical = BubtSpacing.Md),
-        verticalArrangement = Arrangement.spacedBy(BubtSpacing.Md)
+        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         item {
             BubtSegmentedControl(
@@ -117,27 +123,34 @@ fun ExamsContent(
                 Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = term,
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.weight(1f)
                     )
                     Surface(
                         onClick = onDownloadAll,
-                        shape = BubtShapes.Chip,
+                        shape = RoundedCornerShape(14.dp),
                         color = MaterialTheme.colorScheme.surface,
                         contentColor = MaterialTheme.colorScheme.primary,
                         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
                     ) {
                         Row(
-                            modifier = Modifier.padding(horizontal = BubtSpacing.Md, vertical = BubtSpacing.Xs),
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
                                 imageVector = Icons.Outlined.Download,
                                 contentDescription = null,
-                                modifier = Modifier.size(16.dp)
+                                modifier = Modifier.size(18.dp)
                             )
-                            Text(text = " All", style = MaterialTheme.typography.labelMedium)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "All",
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.primary
+                            )
                         }
                     }
                 }
@@ -160,13 +173,14 @@ private fun SupplementaryBanner(count: Int, onClick: () -> Unit) {
     Surface(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
-        shape = BubtShapes.Card,
-        color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.4f),
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.errorContainer,
         contentColor = MaterialTheme.colorScheme.onErrorContainer
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = BubtSpacing.CardPadding, vertical = BubtSpacing.Md),
-            verticalAlignment = Alignment.CenterVertically
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Icon(
                 imageVector = Icons.Outlined.EventBusy,
@@ -175,10 +189,9 @@ private fun SupplementaryBanner(count: Int, onClick: () -> Unit) {
             )
             Text(
                 text = if (count == 1) "1 supplementary exam scheduled" else "$count supplementary exams scheduled",
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(horizontal = BubtSpacing.Sm)
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.weight(1f)
             )
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
@@ -199,56 +212,86 @@ private fun ExamCard(
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = BubtShapes.Card,
-        color = if (supplementary) MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.4f)
+        shape = RoundedCornerShape(16.dp),
+        color = if (supplementary) MaterialTheme.colorScheme.errorContainer
         else MaterialTheme.colorScheme.surface,
-        border = if (supplementary) null else BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+        border = if (supplementary) null else BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+        shadowElevation = 1.dp
     ) {
-        Column(modifier = Modifier.padding(BubtSpacing.CardPadding)) {
-            Row(verticalAlignment = Alignment.Top) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.Top,
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
                 DateBadge(day = exam.date.day, month = exam.date.monthShort)
-                Spacer(modifier = Modifier.width(BubtSpacing.Md))
-                Column(modifier = Modifier.weight(1f)) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
                     Text(
-                        text = "${exam.course.code} · ${exam.course.title}",
+                        text = exam.course.title,
                         style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
-                        text = "${exam.date.weekdayShort} · ${exam.time}",
-                        style = MaterialTheme.typography.bodyMedium,
+                        text = "${exam.course.code} · ${exam.date.weekdayShort} · ${exam.time}",
+                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = "${exam.room} · Seat ${exam.seat}",
-                        style = MaterialTheme.typography.bodyMedium,
+                        text = "Room ${exam.room} · Seat ${exam.seat}",
+                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
-            Spacer(modifier = Modifier.height(BubtSpacing.Md))
-            Row(horizontalArrangement = Arrangement.spacedBy(BubtSpacing.Sm)) {
-                BubtOutlinedButton(
+
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                BubtTonalButton(
                     text = "PDF",
                     onClick = onDownloadPdf,
-                    leadingIcon = Icons.Outlined.Download,
+                    leadingIcon = Icons.Outlined.PictureAsPdf,
                     modifier = Modifier.weight(1f)
                 )
                 if (reminderSet) {
-                    BubtPrimaryButton(
-                        text = "Reminder set",
+                    Surface(
                         onClick = onToggleReminder,
-                        leadingIcon = Icons.Filled.Check,
-                        modifier = Modifier.weight(1.4f)
-                    )
+                        modifier = Modifier
+                            .weight(1.3f)
+                            .height(48.dp),
+                        shape = RoundedCornerShape(24.dp),
+                        color = BubtSuccessContainerLight,
+                        contentColor = BubtOnSuccessContainerLight
+                    ) {
+                        Row(
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Check,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Reminder on",
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
                 } else {
                     BubtOutlinedButton(
                         text = "Set reminder",
                         onClick = onToggleReminder,
                         leadingIcon = Icons.Outlined.NotificationsNone,
-                        modifier = Modifier.weight(1.4f)
+                        modifier = Modifier.weight(1.3f)
                     )
                 }
             }
@@ -259,37 +302,46 @@ private fun ExamCard(
 @Composable
 private fun DateBadge(day: Int, month: String) {
     Surface(
-        shape = BubtShapes.Field,
+        shape = RoundedCornerShape(12.dp),
         color = MaterialTheme.colorScheme.primaryContainer,
         contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-        modifier = Modifier.size(width = 48.dp, height = 52.dp)
+        modifier = Modifier.width(48.dp)
     ) {
         Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            modifier = Modifier.padding(vertical = 6.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(text = day.toString(), style = MaterialTheme.typography.titleLarge)
-            Text(text = month.uppercase(), style = MaterialTheme.typography.labelSmall)
+            Text(
+                text = "$day",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                fontSize = 20.sp,
+                lineHeight = 22.sp
+            )
+            Text(
+                text = month.uppercase(),
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 11.sp
+            )
         }
     }
 }
 
-@Preview(showBackground = true, heightDp = 700)
+@Preview(showBackground = true)
 @Composable
-private fun ExamsContentPreview() {
+private fun ExamsTabPreview() {
     BUBTConnectMaterial3Theme {
-        Surface(color = MaterialTheme.colorScheme.background) {
-            ExamsContent(
-                state = ExamsUiState(
-                    groups = SampleAcademicsRepository.exams().filter { it.kind == ExamKind.Normal }.groupBy { it.term },
-                    reminders = setOf("exam:mid-cse231"),
-                    supplementaryCount = 1
-                ),
-                onSelectKind = {},
-                onDownloadPdf = {},
-                onDownloadAll = {},
-                onToggleReminder = {}
-            )
-        }
+        ExamsContent(
+            state = ExamsUiState(
+                kind = ExamKind.Normal,
+                groups = mapOf("Mid-term · Fall 2026" to SampleAcademicsRepository.exams()),
+                supplementaryCount = 1
+            ),
+            onSelectKind = {},
+            onDownloadPdf = {},
+            onDownloadAll = {},
+            onToggleReminder = {}
+        )
     }
 }

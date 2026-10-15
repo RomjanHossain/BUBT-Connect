@@ -88,7 +88,8 @@ private fun BubtButtonSurface(
     disabledContainer: Color,
     disabledContent: Color,
     border: BorderStroke? = null,
-    leadingIcon: ImageVector? = null
+    leadingIcon: ImageVector? = null,
+    trailingIcon: ImageVector? = null
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
@@ -114,7 +115,7 @@ private fun BubtButtonSurface(
 
     Button(
         onClick = onClick,
-        modifier = modifier.height(48.dp),
+        modifier = modifier.height(52.dp),
         enabled = effective != BubtButtonState.Disabled && effective != BubtButtonState.Loading,
         interactionSource = interactionSource,
         shape = BubtShapes.Button,
@@ -146,6 +147,14 @@ private fun BubtButtonSurface(
                     Spacer(modifier = Modifier.width(BubtSpacing.Sm))
                 }
                 Text(text = text, style = MaterialTheme.typography.labelLarge)
+                if (trailingIcon != null) {
+                    Spacer(modifier = Modifier.width(BubtSpacing.Sm))
+                    Icon(
+                        imageVector = trailingIcon,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
         }
     }
@@ -160,7 +169,8 @@ fun BubtPrimaryButton(
     enabled: Boolean = true,
     loading: Boolean = false,
     state: BubtButtonState? = null,
-    leadingIcon: ImageVector? = null
+    leadingIcon: ImageVector? = null,
+    trailingIcon: ImageVector? = null
 ) {
     BubtButtonSurface(
         text = text,
@@ -173,7 +183,8 @@ fun BubtPrimaryButton(
         content = MaterialTheme.colorScheme.onPrimary,
         disabledContainer = MaterialTheme.colorScheme.surfaceContainerHighest,
         disabledContent = MaterialTheme.colorScheme.onSurfaceVariant,
-        leadingIcon = leadingIcon
+        leadingIcon = leadingIcon,
+        trailingIcon = trailingIcon
     )
 }
 
@@ -186,7 +197,8 @@ fun BubtTonalButton(
     enabled: Boolean = true,
     loading: Boolean = false,
     state: BubtButtonState? = null,
-    leadingIcon: ImageVector? = null
+    leadingIcon: ImageVector? = null,
+    trailingIcon: ImageVector? = null
 ) {
     BubtButtonSurface(
         text = text,
@@ -199,7 +211,8 @@ fun BubtTonalButton(
         content = MaterialTheme.colorScheme.onPrimaryContainer,
         disabledContainer = MaterialTheme.colorScheme.surfaceContainerHighest,
         disabledContent = MaterialTheme.colorScheme.onSurfaceVariant,
-        leadingIcon = leadingIcon
+        leadingIcon = leadingIcon,
+        trailingIcon = trailingIcon
     )
 }
 
@@ -211,7 +224,8 @@ fun BubtOutlinedButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     state: BubtButtonState? = null,
-    leadingIcon: ImageVector? = null
+    leadingIcon: ImageVector? = null,
+    trailingIcon: ImageVector? = null
 ) {
     BubtButtonSurface(
         text = text,
@@ -225,7 +239,8 @@ fun BubtOutlinedButton(
         disabledContainer = Color.Transparent,
         disabledContent = MaterialTheme.colorScheme.onSurfaceVariant,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-        leadingIcon = leadingIcon
+        leadingIcon = leadingIcon,
+        trailingIcon = trailingIcon
     )
 }
 

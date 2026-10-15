@@ -1,9 +1,6 @@
 package com.corethink.bubtconnect.ui.onboarding
 
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,6 +16,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Event
@@ -34,13 +32,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.corethink.bubtconnect.R
+import androidx.compose.ui.unit.sp
 import com.corethink.bubtconnect.ui.design.BUBTConnectMaterial3Theme
 import com.corethink.bubtconnect.ui.design.BubtPrimaryButton
 import com.corethink.bubtconnect.ui.design.BubtSpacing
@@ -48,7 +43,7 @@ import com.corethink.bubtconnect.ui.design.BubtSuccess
 import com.corethink.bubtconnect.ui.design.BubtTextButton
 import com.corethink.bubtconnect.ui.design.BubtWarning
 
-/** 1c · Welcome splash. Left-aligned single screen with a floating day/event illustration. */
+/** 1c · Welcome. Matches 1c from Student App UI.dc.html exactly. */
 @Composable
 fun WelcomeScreen(
     onGetStarted: () -> Unit,
@@ -60,30 +55,51 @@ fun WelcomeScreen(
                 .fillMaxSize()
                 .statusBarsPadding()
                 .navigationBarsPadding()
-                .padding(horizontal = BubtSpacing.Screen, vertical = BubtSpacing.Xl),
+                .padding(horizontal = 24.dp, vertical = 16.dp),
             horizontalAlignment = Alignment.Start
         ) {
             WelcomeIllustration()
-            Spacer(modifier = Modifier.height(BubtSpacing.Xl))
 
+            Spacer(modifier = Modifier.height(28.dp))
+
+            // Brand row: 'B' badge (28x28dp, 9dp radius) + BUBT Companion
             Row(verticalAlignment = Alignment.CenterVertically) {
-                BubtLogo(size = 40.dp)
-                Spacer(modifier = Modifier.width(BubtSpacing.Sm))
+                Box(
+                    modifier = Modifier
+                        .size(28.dp)
+                        .clip(RoundedCornerShape(9.dp))
+                        .background(MaterialTheme.colorScheme.primary),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "B",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp
+                    )
+                }
+                Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = "BUBT Companion",
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Medium,
+                    fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
             }
-            Spacer(modifier = Modifier.height(BubtSpacing.Md))
+
+            Spacer(modifier = Modifier.height(14.dp))
+
             Text(
                 text = "Your whole campus, in one pocket.",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.SemiBold,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                fontSize = 28.sp,
+                lineHeight = 34.sp,
                 color = MaterialTheme.colorScheme.onSurface
             )
-            Spacer(modifier = Modifier.height(BubtSpacing.Sm))
+
+            Spacer(modifier = Modifier.height(10.dp))
+
             Text(
                 text = "Scan assignments with cover pages, track your routine, check results and share notes.",
                 style = MaterialTheme.typography.bodyLarge,
@@ -92,30 +108,65 @@ fun WelcomeScreen(
 
             Spacer(modifier = Modifier.weight(1f))
 
+            // Pagination indicator: 22x6dp pill, 6x6dp dot, 6x6dp dot
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 18.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(22.dp, 6.dp)
+                        .clip(RoundedCornerShape(3.dp))
+                        .background(MaterialTheme.colorScheme.primary)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Box(
+                    modifier = Modifier
+                        .size(6.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.outline)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Box(
+                    modifier = Modifier
+                        .size(6.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.outline)
+                )
+            }
+
+            // Primary button: "Get Started" text with arrow_forward icon on the RIGHT (trailing)
             BubtPrimaryButton(
                 text = "Get Started",
                 onClick = onGetStarted,
-                leadingIcon = Icons.AutoMirrored.Outlined.ArrowForward,
+                trailingIcon = Icons.AutoMirrored.Outlined.ArrowForward,
                 modifier = Modifier
                     .fillMaxWidth()
                     .shadow(
-                        elevation = 6.dp,
-                        shape = MaterialTheme.shapes.medium,
-                        ambientColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.35f),
-                        spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)
+                        elevation = 8.dp,
+                        shape = RoundedCornerShape(28.dp),
+                        ambientColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f),
+                        spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
                     )
             )
-            Spacer(modifier = Modifier.height(BubtSpacing.Sm))
+
+            Spacer(modifier = Modifier.height(6.dp))
+
             BubtTextButton(
                 text = "I have an Annex account",
                 onClick = onAnnexLogin,
-                modifier = Modifier.align(Alignment.CenterHorizontally)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(44.dp)
             )
         }
     }
 }
 
-/** Soft circle with a rotated paper card, floating event card and a success check badge — stands in for the Lottie loop. */
+/** 1c Illustration matching HTML design exactly. */
 @Composable
 private fun WelcomeIllustration() {
     Box(
@@ -124,18 +175,19 @@ private fun WelcomeIllustration() {
             .height(270.dp),
         contentAlignment = Alignment.Center
     ) {
+        // Soft primary container circle in center
         Box(
             modifier = Modifier
                 .size(220.dp, 234.dp)
                 .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f))
+                .background(MaterialTheme.colorScheme.primaryContainer)
         )
 
-        // Rotated paper sheet with a logo dot and placeholder lines.
+        // Rotated paper sheet (-8deg)
         Surface(
-            shape = MaterialTheme.shapes.medium,
+            shape = RoundedCornerShape(12.dp),
             color = MaterialTheme.colorScheme.surface,
-            shadowElevation = 4.dp,
+            shadowElevation = 6.dp,
             modifier = Modifier
                 .offset(x = (-34).dp, y = (-5).dp)
                 .size(108.dp, 140.dp)
@@ -152,9 +204,23 @@ private fun WelcomeIllustration() {
                         .background(MaterialTheme.colorScheme.primary)
                         .align(Alignment.CenterHorizontally)
                 )
-                PaperLine(fraction = 0.8f)
-                PaperLine(fraction = 0.55f)
-                Spacer(modifier = Modifier.height(8.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(0.8f)
+                        .height(3.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFFCBD5E1))
+                        .align(Alignment.CenterHorizontally)
+                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(0.55f)
+                        .height(3.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.outlineVariant)
+                        .align(Alignment.CenterHorizontally)
+                )
+                Spacer(modifier = Modifier.height(2.dp))
                 PaperLine(fraction = 1f)
                 PaperLine(fraction = 0.85f)
                 PaperLine(fraction = 0.7f)
@@ -162,11 +228,11 @@ private fun WelcomeIllustration() {
             }
         }
 
-        // Floating day/event card.
+        // Floating event card (SUN 11)
         Surface(
-            shape = MaterialTheme.shapes.medium,
+            shape = RoundedCornerShape(14.dp),
             color = MaterialTheme.colorScheme.surface,
-            shadowElevation = 4.dp,
+            shadowElevation = 6.dp,
             modifier = Modifier
                 .offset(x = 58.dp, y = (-48).dp)
                 .width(92.dp)
@@ -195,7 +261,7 @@ private fun WelcomeIllustration() {
             }
         }
 
-        // Success check badge.
+        // Success check badge
         Surface(
             shape = CircleShape,
             color = BubtSuccess,
@@ -214,7 +280,7 @@ private fun WelcomeIllustration() {
             }
         }
 
-        // Decorative confetti bits.
+        // Decorative floating bits
         Box(
             modifier = Modifier
                 .offset(x = (-105).dp, y = (-100).dp)
@@ -225,7 +291,7 @@ private fun WelcomeIllustration() {
             modifier = Modifier
                 .offset(x = (-109).dp, y = 72.dp)
                 .size(14.dp)
-                .clip(MaterialTheme.shapes.extraSmall)
+                .clip(RoundedCornerShape(4.dp))
                 .background(MaterialTheme.colorScheme.primary)
                 .graphicsLayer { rotationZ = 20f }
         )
@@ -243,32 +309,10 @@ private fun PaperLine(fraction: Float) {
     Box(
         modifier = Modifier
             .fillMaxWidth(fraction)
-            .height(4.dp)
+            .height(3.dp)
             .clip(CircleShape)
             .background(MaterialTheme.colorScheme.outlineVariant)
     )
-}
-
-/** The BUBT crest on a white disc — the crest artwork assumes a white ground in both themes. */
-@Composable
-fun BubtLogo(size: Dp, modifier: Modifier = Modifier) {
-    Box(
-        modifier = modifier
-            .size(size)
-            .clip(CircleShape)
-            .background(Color.White)
-            .border(BorderStroke(1.dp, MaterialTheme.colorScheme.outline), CircleShape),
-        contentAlignment = Alignment.Center
-    ) {
-        Image(
-            painter = painterResource(R.mipmap.ic_launcher_foreground),
-            contentDescription = "BUBT logo",
-            // Adaptive-icon art keeps the crest inside the centre 66%; scale it to fill the disc.
-            modifier = Modifier
-                .size(size)
-                .graphicsLayer { scaleX = 1.45f; scaleY = 1.45f }
-        )
-    }
 }
 
 @Preview(showBackground = true, heightDp = 800)
