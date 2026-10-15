@@ -2,7 +2,6 @@ package com.corethink.bubtconnect.ui.profile
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -179,38 +178,11 @@ private fun ProfileSummaryCard(profile: StudentProfile, onEditProfile: () -> Uni
     ) {
         Column(
             modifier = Modifier.padding(BubtSpacing.CardPadding),
-            verticalArrangement = Arrangement.spacedBy(BubtSpacing.Sm)
+            verticalArrangement = Arrangement.spacedBy(BubtSpacing.Md)
         ) {
             SummaryRow(label = "Roll", value = profile.roll)
             SummaryRow(label = "Department", value = profile.department)
             SummaryRow(label = "Semester", value = profile.semester)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.Lock,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(14.dp)
-                )
-                Spacer(modifier = Modifier.width(BubtSpacing.Xs))
-                Text(
-                    text = "Read-only",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.weight(1f)
-                )
-                Text(
-                    text = "Edit in Profile",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier
-                        .clip(BubtShapes.Chip)
-                        .clickable(onClick = onEditProfile)
-                        .padding(horizontal = BubtSpacing.Xs, vertical = 2.dp)
-                )
-            }
         }
     }
 }
@@ -234,7 +206,7 @@ private fun SummaryRow(label: String, value: String) {
             imageVector = Icons.Outlined.Lock,
             contentDescription = "Locked",
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(14.dp)
+            modifier = Modifier.size(16.dp)
         )
     }
 }

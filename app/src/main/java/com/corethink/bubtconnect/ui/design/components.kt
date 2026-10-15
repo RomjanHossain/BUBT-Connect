@@ -64,6 +64,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 // ============================================================ buttons
@@ -357,6 +358,7 @@ fun BubtChip(
     modifier: Modifier = Modifier,
     style: BubtChipStyle = BubtChipStyle.Normal,
     pressed: Boolean = false,
+    leadingDot: Color? = null,
     onClick: (() -> Unit)? = null
 ) {
     val container = when (style) {
@@ -393,6 +395,15 @@ fun BubtChip(
                     modifier = Modifier.size(14.dp)
                 )
                 Spacer(modifier = Modifier.width(BubtSpacing.Xs))
+            }
+            if (leadingDot != null) {
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .clip(CircleShape)
+                        .background(leadingDot)
+                )
+                Spacer(modifier = Modifier.width(BubtSpacing.Sm))
             }
             Text(text = text, style = MaterialTheme.typography.labelMedium)
         }
@@ -648,6 +659,78 @@ fun SkeletonCard(modifier: Modifier = Modifier) {
     }
 }
 
+
+// ============================================================ tags & category tiles
+/**
+ * Tag from 1b: small pill; [style] picks the palette. Used for Done/Ongoing (1m),
+ * grade letters (1j), CSE/BBA chips on feed cards (1t) and role tags on Profile (1u).
+ */
+enum class BubtTagStyle { Neutral, Primary, Success, Warning, Supplementary }
+
+@Composable
+fun BubtTag(
+    text: String,
+    modifier: Modifier = Modifier,
+    style: BubtTagStyle = BubtTagStyle.Neutral,
+    leadingIcon: ImageVector? = null,
+    iconTint: Color? = null
+) {
+    val (container, content) = when (style) {
+        BubtTagStyle.Neutral ->
+            MaterialTheme.colorScheme.surfaceContainer to MaterialTheme.colorScheme.onSurface
+        BubtTagStyle.Primary ->
+            MaterialTheme.colorScheme.primaryContainer to MaterialTheme.colorScheme.onPrimaryContainer
+        BubtTagStyle.Success -> bubtSuccessContainer() to bubtOnSuccessContainer()
+        BubtTagStyle.Warning -> bubtWarningContainer() to bubtOnWarningContainer()
+        BubtTagStyle.Supplementary ->
+            MaterialTheme.colorScheme.errorContainer to MaterialTheme.colorScheme.onErrorContainer
+    }
+    Surface(modifier = modifier, shape = BubtShapes.Chip, color = container, contentColor = content) {
+        Row(
+            modifier = Modifier.padding(horizontal = BubtSpacing.Sm, vertical = BubtSpacing.Xs),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (leadingIcon != null) {
+                Icon(
+                    imageVector = leadingIcon,
+                    contentDescription = null,
+                    modifier = Modifier.size(12.dp),
+                    tint = iconTint ?: content
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+            }
+            Text(text = text, style = MaterialTheme.typography.labelSmall)
+        }
+    }
+}
+
+/**
+ * Category tile from 1t: a tinted square with a filled Material icon, used for the
+ * PDF thumbnail on feed cards. [tint] is one of the four category colors (blue work,
+ * amber lab, green functions, etc.) so the icon reads as a category at a glance.
+ */
+@Composable
+fun BubtCategoryTile(
+    icon: ImageVector,
+    modifier: Modifier = Modifier,
+    tint: Color = MaterialTheme.colorScheme.primary,
+    size: Dp = 48.dp
+) {
+    Surface(
+        modifier = modifier.size(size),
+        shape = BubtShapes.Field,
+        color = tint.copy(alpha = 0.14f)
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = tint,
+                modifier = Modifier.size(size * 0.5f)
+            )
+        }
+    }
+}
 
 // ============================================================ pager indicator
 /** Pager dots — the active page stretches into a pill. */

@@ -2,21 +2,23 @@ package com.corethink.bubtconnect.ui.courses
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -42,6 +44,8 @@ import com.corethink.bubtconnect.ui.components.formatCredits
 import com.corethink.bubtconnect.ui.design.BUBTConnectMaterial3Theme
 import com.corethink.bubtconnect.ui.design.BubtShapes
 import com.corethink.bubtconnect.ui.design.BubtSpacing
+import com.corethink.bubtconnect.ui.design.BubtTag
+import com.corethink.bubtconnect.ui.design.BubtTagStyle
 
 @Composable
 fun CoursesTab(viewModel: CoursesViewModel = viewModel()) {
@@ -133,57 +137,71 @@ fun CoursesContent(
             }
         }
         items(state.courses, key = { it.course.code }) { item ->
-            CourseRow(item = item)
-            HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+            CourseCard(item = item)
         }
     }
 }
 
 @Composable
-private fun CourseRow(item: CurriculumCourse) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = BubtSpacing.Md),
-        verticalAlignment = Alignment.CenterVertically
+private fun CourseCard(item: CurriculumCourse) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = BubtShapes.Card,
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = item.course.title,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                text = "${item.course.code} · ${formatCredits(item.credits)} credits",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-        when (item.status) {
-            CourseStatus.Completed -> Surface(
-                shape = BubtShapes.Chip,
-                color = MaterialTheme.colorScheme.surface,
-                contentColor = MaterialTheme.colorScheme.onSurface,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = BubtSpacing.Md, vertical = BubtSpacing.Xs),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(14.dp))
-                    Text(text = " Done", style = MaterialTheme.typography.labelMedium)
-                }
+        Row(
+            modifier = Modifier.padding(BubtSpacing.CardPadding),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            NumberTile(number = item.course.code.takeLast(3))
+            Spacer(modifier = Modifier.width(BubtSpacing.Md))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = item.course.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = "${item.course.code} · ${formatCredits(item.credits)} credits",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
-            CourseStatus.InProgress -> Text(
-                text = "Ongoing",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.primary
+            when (item.status) {
+                CourseStatus.Completed -> BubtTag(
+                    text = "Done",
+                    style = BubtTagStyle.Success,
+                    leadingIcon = Icons.Filled.Check
+                )
+                CourseStatus.InProgress -> BubtTag(
+                    text = "Ongoing",
+                    style = BubtTagStyle.Primary
+                )
+                CourseStatus.Remaining -> Unit
+            }
+        }
+    }
+}
+
+/** Leading rounded tile showing the 3-digit course number (e.g. "101"). */
+@Composable
+private fun NumberTile(number: String) {
+    Surface(
+        shape = BubtShapes.Field,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        modifier = Modifier.size(48.dp)
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Text(
+                text = number,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            CourseStatus.Remaining -> Unit
         }
     }
 }

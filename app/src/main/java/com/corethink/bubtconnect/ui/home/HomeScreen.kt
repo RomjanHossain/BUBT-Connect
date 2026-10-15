@@ -58,17 +58,26 @@ import com.corethink.bubtconnect.data.model.DashboardHighlight
 import com.corethink.bubtconnect.data.repository.SampleDashboardRepository
 import com.corethink.bubtconnect.ui.design.BUBTConnectMaterial3Theme
 import com.corethink.bubtconnect.ui.design.BubtChip
+import com.corethink.bubtconnect.ui.design.BubtError
 import com.corethink.bubtconnect.ui.design.BubtPagerIndicator
+import com.corethink.bubtconnect.ui.design.BubtPrimaryLight
 import com.corethink.bubtconnect.ui.design.BubtShapes
 import com.corethink.bubtconnect.ui.design.BubtSpacing
+import com.corethink.bubtconnect.ui.design.BubtSuccess
+import com.corethink.bubtconnect.ui.design.BubtWarning
 import java.util.Calendar
 import java.util.Locale
 
-enum class QuickAction(val label: String, val icon: ImageVector, val needsAnnex: Boolean = false) {
-    ScanDocument("Scan Document", Icons.Outlined.DocumentScanner),
-    ViewRoutine("View Routine", Icons.Outlined.ViewTimeline),
-    CheckResult("Check Result", Icons.Outlined.School, needsAnnex = true),
-    AcademicCalendar("Academic Calendar", Icons.Outlined.CalendarMonth)
+enum class QuickAction(
+    val label: String,
+    val icon: ImageVector,
+    val needsAnnex: Boolean = false,
+    val tint: Color
+) {
+    ScanDocument("Scan Document", Icons.Outlined.DocumentScanner, tint = BubtPrimaryLight),
+    ViewRoutine("View Routine", Icons.Outlined.ViewTimeline, tint = BubtSuccess),
+    CheckResult("Check Result", Icons.Outlined.School, needsAnnex = true, tint = BubtWarning),
+    AcademicCalendar("Academic Calendar", Icons.Outlined.CalendarMonth, tint = BubtError)
 }
 
 @Composable
@@ -127,7 +136,11 @@ fun HomeScreen(
             horizontalArrangement = Arrangement.spacedBy(BubtSpacing.Sm)
         ) {
             items(state.courses, key = { it.code }) { course ->
-                BubtChip(text = course.code, onClick = { onCourseClick(course) })
+                BubtChip(
+                    text = course.code,
+                    onClick = { onCourseClick(course) },
+                    leadingDot = MaterialTheme.colorScheme.primary
+                )
             }
         }
         Spacer(modifier = Modifier.height(BubtSpacing.Lg))
@@ -185,20 +198,30 @@ private fun HomeHeader(
                 overflow = TextOverflow.Ellipsis
             )
         }
-        Surface(
-            onClick = onNotifications,
-            shape = BubtShapes.Field,
-            color = MaterialTheme.colorScheme.surface,
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-            modifier = Modifier.size(44.dp)
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    imageVector = Icons.Outlined.NotificationsNone,
-                    contentDescription = "Notifications",
-                    tint = MaterialTheme.colorScheme.onSurface
-                )
+        Box {
+            Surface(
+                onClick = onNotifications,
+                shape = BubtShapes.Field,
+                color = MaterialTheme.colorScheme.surface,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                modifier = Modifier.size(44.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Outlined.NotificationsNone,
+                        contentDescription = "Notifications",
+                        tint = MaterialTheme.colorScheme.onSurface
+                    )
+                }
             }
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 8.dp, end = 8.dp)
+                    .size(9.dp)
+                    .clip(CircleShape)
+                    .background(BubtError)
+            )
         }
     }
 }
@@ -396,8 +419,7 @@ private fun QuickActionTile(
         onClick = onClick,
         modifier = modifier,
         shape = BubtShapes.Card,
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+        color = MaterialTheme.colorScheme.surfaceContainer
     ) {
         Column(modifier = Modifier.padding(BubtSpacing.CardPadding)) {
             Row(verticalAlignment = Alignment.Top) {
@@ -405,13 +427,13 @@ private fun QuickActionTile(
                     modifier = Modifier
                         .size(44.dp)
                         .clip(BubtShapes.Field)
-                        .background(MaterialTheme.colorScheme.primaryContainer),
+                        .background(action.tint.copy(alpha = 0.14f)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = action.icon,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                        tint = action.tint
                     )
                 }
                 Spacer(modifier = Modifier.weight(1f))

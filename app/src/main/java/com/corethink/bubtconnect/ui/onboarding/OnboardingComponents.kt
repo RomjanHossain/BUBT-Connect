@@ -57,22 +57,14 @@ fun OnboardingTopBar(
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (onBack != null) {
-            Surface(
-                onClick = onBack,
-                shape = BubtShapes.Field,
-                color = MaterialTheme.colorScheme.surface,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                modifier = Modifier.size(40.dp)
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back",
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
+            IconButton(onClick = onBack, modifier = Modifier.size(40.dp)) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back",
+                    tint = MaterialTheme.colorScheme.onSurface
+                )
             }
-            Spacer(modifier = Modifier.width(BubtSpacing.Md))
+            Spacer(modifier = Modifier.width(BubtSpacing.Xs))
         }
         Text(
             text = title,

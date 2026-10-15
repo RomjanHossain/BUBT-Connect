@@ -16,14 +16,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material.icons.filled.TrendingDown
-import androidx.compose.material.icons.filled.TrendingUp
+import androidx.compose.material.icons.automirrored.filled.TrendingDown
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -46,7 +47,6 @@ import com.corethink.bubtconnect.data.repository.SampleAcademicsRepository
 import com.corethink.bubtconnect.ui.components.formatGpa
 import com.corethink.bubtconnect.ui.components.formatCredits
 import com.corethink.bubtconnect.ui.design.BUBTConnectMaterial3Theme
-import com.corethink.bubtconnect.ui.design.BubtError
 import com.corethink.bubtconnect.ui.design.BubtShapes
 import com.corethink.bubtconnect.ui.design.BubtSpacing
 import com.corethink.bubtconnect.ui.design.BubtSuccess
@@ -85,24 +85,12 @@ fun ResultsContent(
             onSelect = { name -> onSelectSemester(state.semesters.indexOfFirst { it.semester == name }) }
         )
 
-        Row(horizontalArrangement = Arrangement.spacedBy(BubtSpacing.Md)) {
-            GpaCard(
-                label = "SGPA",
-                value = selected.sgpa,
-                delta = state.sgpaDelta,
-                container = MaterialTheme.colorScheme.surface,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                modifier = Modifier.weight(1f)
-            )
-            GpaCard(
-                label = "CGPA",
-                value = state.cgpa,
-                subtitle = "${formatCredits(state.totalCredits)} credits",
-                container = MaterialTheme.colorScheme.primaryContainer,
-                border = null,
-                modifier = Modifier.weight(1f)
-            )
-        }
+        SgpaCgpaPanel(
+            sgpa = selected.sgpa,
+            sgpaDelta = state.sgpaDelta,
+            cgpa = state.cgpa,
+            credits = formatCredits(state.totalCredits)
+        )
 
         SgpaHistory(
             semesters = state.semesters,
@@ -129,58 +117,89 @@ fun ResultsContent(
     }
 }
 
+/** One solid primary panel splitting SGPA (with delta) and CGPA (with credits). */
 @Composable
-private fun GpaCard(
+private fun SgpaCgpaPanel(
+    sgpa: Double,
+    sgpaDelta: Double?,
+    cgpa: Double,
+    credits: String,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = BubtShapes.Card,
+        color = MaterialTheme.colorScheme.primary
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = BubtSpacing.Xl),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            GpaHalf(
+                label = "SGPA",
+                value = formatGpa(sgpa),
+                content = Color.White,
+                modifier = Modifier.weight(1f),
+                delta = sgpaDelta
+            )
+            Box(
+                modifier = Modifier
+                    .width(1.dp)
+                    .height(56.dp)
+                    .background(Color.White.copy(alpha = 0.2f))
+            )
+            GpaHalf(
+                label = "CGPA",
+                value = formatGpa(cgpa),
+                content = Color.White,
+                modifier = Modifier.weight(1f),
+                subtitle = credits
+            )
+        }
+    }
+}
+
+@Composable
+private fun GpaHalf(
     label: String,
-    value: Double,
-    container: Color,
-    border: BorderStroke?,
+    value: String,
+    content: Color,
     modifier: Modifier = Modifier,
     delta: Double? = null,
     subtitle: String? = null
 ) {
-    Surface(
-        modifier = modifier,
-        shape = BubtShapes.Card,
-        color = container,
-        border = border
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = BubtSpacing.Lg),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                text = formatGpa(value),
-                style = MaterialTheme.typography.displaySmall,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            when {
-                delta != null -> Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = if (delta >= 0) Icons.Filled.TrendingUp else Icons.Filled.TrendingDown,
-                        contentDescription = null,
-                        tint = if (delta >= 0) BubtSuccess else BubtError,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Text(
-                        text = String.format(java.util.Locale.US, "%+.2f", delta),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = if (delta >= 0) BubtSuccess else BubtError
-                    )
-                }
-                subtitle != null -> Text(
-                    text = subtitle,
+    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = content.copy(alpha = 0.85f)
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.displaySmall,
+            color = content
+        )
+        when {
+            delta != null -> Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = if (delta >= 0) Icons.AutoMirrored.Filled.TrendingUp else Icons.AutoMirrored.Filled.TrendingDown,
+                    contentDescription = null,
+                    tint = if (delta >= 0) Color.White else Color.White,
+                    modifier = Modifier.size(16.dp)
+                )
+                Text(
+                    text = String.format(java.util.Locale.US, "%+.2f", delta),
                     style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                    color = content
                 )
             }
+            subtitle != null -> Text(
+                text = subtitle,
+                style = MaterialTheme.typography.labelMedium,
+                color = content.copy(alpha = 0.85f)
+            )
         }
     }
 }

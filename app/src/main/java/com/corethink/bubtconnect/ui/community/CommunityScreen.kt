@@ -23,12 +23,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.outlined.Bookmarks
-import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.FileDownload
+import androidx.compose.material.icons.outlined.Functions
 import androidx.compose.material.icons.outlined.IosShare
-import androidx.compose.material.icons.outlined.PictureAsPdf
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
+import androidx.compose.material.icons.outlined.Work
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -46,13 +48,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.corethink.bubtconnect.data.model.PostCategory
 import com.corethink.bubtconnect.data.repository.SampleCommunityRepository
 import com.corethink.bubtconnect.ui.community.CommunityViewModel.Companion.ANONYMOUS
 import com.corethink.bubtconnect.ui.community.CommunityViewModel.Companion.toItem
@@ -61,8 +65,14 @@ import com.corethink.bubtconnect.ui.components.formatCompactCount
 import com.corethink.bubtconnect.ui.components.formatDaysAgo
 import com.corethink.bubtconnect.ui.components.showNotAvailableYet
 import com.corethink.bubtconnect.ui.design.BUBTConnectMaterial3Theme
+import com.corethink.bubtconnect.ui.design.BubtCategoryTile
+import com.corethink.bubtconnect.ui.design.BubtError
 import com.corethink.bubtconnect.ui.design.BubtShapes
 import com.corethink.bubtconnect.ui.design.BubtSpacing
+import com.corethink.bubtconnect.ui.design.BubtSuccess
+import com.corethink.bubtconnect.ui.design.BubtTag
+import com.corethink.bubtconnect.ui.design.BubtTagStyle
+import com.corethink.bubtconnect.ui.design.BubtWarning
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 
@@ -239,28 +249,26 @@ private fun CommunityPostCard(
     ) {
         Column(modifier = Modifier.padding(BubtSpacing.CardPadding)) {
             Row(verticalAlignment = Alignment.Top) {
-                Box(
-                    modifier = Modifier
-                        .size(width = 48.dp, height = 56.dp)
-                        .clip(BubtShapes.Skeleton)
-                        .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.PictureAsPdf,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                BubtCategoryTile(
+                    icon = iconFor(post.category),
+                    tint = tintFor(post.category)
+                )
                 Spacer(modifier = Modifier.width(BubtSpacing.Md))
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = post.title,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = post.title,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false)
+                        )
+                        if (post.tags.isNotEmpty()) {
+                            Spacer(modifier = Modifier.width(BubtSpacing.Sm))
+                            BubtTag(text = post.tags.first(), style = BubtTagStyle.Primary)
+                        }
+                    }
                     Spacer(modifier = Modifier.height(2.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         if (post.author == null) {
@@ -273,7 +281,7 @@ private fun CommunityPostCard(
                             Spacer(modifier = Modifier.width(BubtSpacing.Xs))
                         }
                         Text(
-                            text = "${post.author ?: ANONYMOUS} · ${post.department}",
+                            text = post.author ?: ANONYMOUS,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1,
@@ -284,61 +292,59 @@ private fun CommunityPostCard(
             }
             Spacer(modifier = Modifier.height(BubtSpacing.Md))
             Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Outlined.Visibility,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(BubtSpacing.Xs))
                 Text(
-                    text = "${formatCompactCount(post.views)} views · ${formatDaysAgo(post.daysAgo)}",
+                    text = "${formatCompactCount(post.views)} · ${formatDaysAgo(post.daysAgo)}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.weight(1f)
                 )
-                LikeButton(liked = item.liked, count = item.likeCount, onClick = onToggleLike)
+                IconButton(onClick = onToggleLike, modifier = Modifier.size(ActionHeight)) {
+                    Icon(
+                        imageVector = Icons.Filled.Favorite,
+                        contentDescription = if (item.liked) "Unlike" else "Like",
+                        tint = if (item.liked) BubtError else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                Text(
+                    text = formatCompactCount(item.likeCount),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = if (item.liked) BubtError else MaterialTheme.colorScheme.onSurfaceVariant
+                )
                 Spacer(modifier = Modifier.width(BubtSpacing.Sm))
-                Surface(
-                    onClick = onDownload,
-                    modifier = Modifier.size(ActionHeight),
-                    shape = BubtShapes.Field,
-                    color = MaterialTheme.colorScheme.surface,
-                    contentColor = MaterialTheme.colorScheme.onSurface,
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = Icons.Outlined.FileDownload,
-                            contentDescription = "Download",
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
+                IconButton(onClick = onDownload, modifier = Modifier.size(ActionHeight)) {
+                    Icon(
+                        imageVector = Icons.Outlined.FileDownload,
+                        contentDescription = "Download",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
             }
         }
     }
 }
 
-private val ActionHeight = 36.dp
+private val ActionHeight = 40.dp
 
-/** Outlined when not liked, solid primary once liked. */
+private fun iconFor(category: PostCategory): ImageVector = when (category) {
+    PostCategory.Notes -> Icons.Outlined.Description
+    PostCategory.LabReport -> Icons.Outlined.Functions
+    PostCategory.Internship -> Icons.Outlined.Work
+}
+
 @Composable
-private fun LikeButton(liked: Boolean, count: Int, onClick: () -> Unit) {
-    Surface(
-        onClick = onClick,
-        modifier = Modifier.height(ActionHeight),
-        shape = BubtShapes.Field,
-        color = if (liked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
-        contentColor = if (liked) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
-        border = if (liked) null else BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = BubtSpacing.Md),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = if (liked) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
-                contentDescription = if (liked) "Unlike" else "Like",
-                modifier = Modifier.size(16.dp)
-            )
-            Spacer(modifier = Modifier.width(BubtSpacing.Xs))
-            Text(text = formatCompactCount(count), style = MaterialTheme.typography.labelLarge)
-        }
-    }
+private fun tintFor(category: PostCategory): Color = when (category) {
+    PostCategory.Notes -> MaterialTheme.colorScheme.primary
+    PostCategory.LabReport -> BubtSuccess
+    PostCategory.Internship -> BubtWarning
 }
 
 @Preview(showBackground = true, heightDp = 800)

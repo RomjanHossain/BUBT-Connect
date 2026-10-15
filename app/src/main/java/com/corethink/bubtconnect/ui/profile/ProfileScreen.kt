@@ -31,6 +31,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -60,11 +61,14 @@ import com.corethink.bubtconnect.ui.auth.AnnexLoginViewModel
 import com.corethink.bubtconnect.ui.components.BubtSegmentedControl
 import com.corethink.bubtconnect.ui.components.rememberSyncedLabel
 import com.corethink.bubtconnect.ui.design.BUBTConnectMaterial3Theme
-import com.corethink.bubtconnect.ui.design.BubtChip
+import com.corethink.bubtconnect.ui.design.BubtCard
+import com.corethink.bubtconnect.ui.design.BubtCardStyle
 import com.corethink.bubtconnect.ui.design.BubtOutlinedButton
 import com.corethink.bubtconnect.ui.design.BubtShapes
 import com.corethink.bubtconnect.ui.design.BubtSpacing
 import com.corethink.bubtconnect.ui.design.BubtSuccess
+import com.corethink.bubtconnect.ui.design.BubtTag
+import com.corethink.bubtconnect.ui.design.BubtTagStyle
 import com.corethink.bubtconnect.ui.design.BubtTextButton
 import com.corethink.bubtconnect.ui.design.bubtErrorText
 
@@ -138,16 +142,16 @@ fun ProfileScreen(
         }
         Spacer(modifier = Modifier.height(BubtSpacing.Lg))
 
-        ProfileIdentity(profile = state.profile, isConnected = state.isConnected)
+        ProfileIdentity(
+            profile = state.profile,
+            isConnected = state.isConnected,
+            lastSyncedAt = state.lastSyncedAt,
+            isSyncing = state.isSyncing,
+            onSync = onSync
+        )
         Spacer(modifier = Modifier.height(BubtSpacing.Xl))
 
         if (state.isConnected) {
-            AnnexStatusCard(
-                lastSyncedAt = state.lastSyncedAt,
-                isSyncing = state.isSyncing,
-                onSync = onSync
-            )
-            Spacer(modifier = Modifier.height(BubtSpacing.Md))
             FeesEntry(onClick = onOpenFees)
         } else {
             ConnectAnnexCard(
@@ -192,96 +196,96 @@ fun ProfileScreen(
 }
 
 @Composable
-private fun ProfileIdentity(profile: StudentProfile?, isConnected: Boolean) {
+private fun ProfileIdentity(
+    profile: StudentProfile?,
+    isConnected: Boolean,
+    lastSyncedAt: Long?,
+    isSyncing: Boolean,
+    onSync: () -> Unit
+) {
     val name = profile?.name ?: if (isConnected) "Student" else "Guest Student"
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Box(
-            modifier = Modifier
-                .size(96.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.primaryContainer),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = initialsOf(name),
-                style = MaterialTheme.typography.headlineMedium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
-            )
-        }
-        Spacer(modifier = Modifier.height(BubtSpacing.Md))
-        Text(
-            text = name,
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-        if (profile != null) {
-            Text(
-                text = "ID ${profile.roll}",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(BubtSpacing.Md))
-            Row(horizontalArrangement = Arrangement.spacedBy(BubtSpacing.Sm)) {
-                BubtChip(text = profile.department)
-                BubtChip(text = "${profile.semester} semester")
+    BubtCard(modifier = Modifier.fillMaxWidth(), style = BubtCardStyle.Outlined) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .size(56.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primaryContainer),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = initialsOf(name),
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
             }
-        }
-    }
-}
-
-@Composable
-private fun AnnexStatusCard(lastSyncedAt: Long?, isSyncing: Boolean, onSync: () -> Unit) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = BubtShapes.Card,
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
-    ) {
-        Row(
-            modifier = Modifier.padding(BubtSpacing.CardPadding),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.Verified,
-                contentDescription = null,
-                tint = BubtSuccess,
-                modifier = Modifier.size(20.dp)
-            )
             Spacer(modifier = Modifier.width(BubtSpacing.Md))
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "Annex connected",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = if (isSyncing) "Syncing…" else rememberSyncedLabel(lastSyncedAt),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            Surface(
-                onClick = onSync,
-                enabled = !isSyncing,
-                shape = BubtShapes.Chip,
-                color = MaterialTheme.colorScheme.surface,
-                contentColor = MaterialTheme.colorScheme.primary,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = BubtSpacing.Md, vertical = BubtSpacing.Sm),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    if (isSyncing) {
-                        CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
-                    } else {
-                        Icon(Icons.Outlined.Sync, contentDescription = null, modifier = Modifier.size(16.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = name,
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    if (isConnected) {
+                        Spacer(modifier = Modifier.width(BubtSpacing.Xs))
+                        Icon(
+                            imageVector = Icons.Outlined.Verified,
+                            contentDescription = "Verified",
+                            tint = BubtSuccess,
+                            modifier = Modifier.size(18.dp)
+                        )
                     }
-                    Spacer(modifier = Modifier.width(BubtSpacing.Xs))
-                    Text(text = "Sync", style = MaterialTheme.typography.labelMedium)
+                }
+                if (profile != null) {
+                    Text(
+                        text = "ID ${profile.roll}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+        if (profile != null) {
+            Spacer(modifier = Modifier.height(BubtSpacing.Md))
+            Row(horizontalArrangement = Arrangement.spacedBy(BubtSpacing.Sm)) {
+                BubtTag(text = profile.department, style = BubtTagStyle.Primary)
+                BubtTag(text = "Intake 49", style = BubtTagStyle.Neutral)
+                BubtTag(text = "Sec 2", style = BubtTagStyle.Neutral)
+            }
+        }
+        if (isConnected) {
+            Spacer(modifier = Modifier.height(BubtSpacing.Lg))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Outlined.Verified,
+                    contentDescription = null,
+                    tint = BubtSuccess,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(BubtSpacing.Sm))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Annex connected",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = if (isSyncing) "Syncing…" else "Synced ${rememberSyncedLabel(lastSyncedAt)}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                IconButton(onClick = onSync, enabled = !isSyncing) {
+                    if (isSyncing) {
+                        CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                    } else {
+                        Icon(
+                            imageVector = Icons.Outlined.Sync,
+                            contentDescription = "Sync",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
             }
         }
@@ -330,21 +334,22 @@ private fun NotificationSettings(
     onPaymentDeadlinesChange: (Boolean) -> Unit
 ) {
     SectionLabel("NOTIFICATIONS")
-    SettingRow(label = "Class reminder", icon = Icons.Outlined.Alarm) {
-        ClassReminderDropdown(
-            minutes = settings.classReminderMinutes,
-            onSelect = onClassReminderChange
-        )
+    BubtCard(modifier = Modifier.fillMaxWidth(), style = BubtCardStyle.Outlined) {
+        SettingRow(label = "Class reminder", icon = Icons.Outlined.Alarm) {
+            ClassReminderDropdown(
+                minutes = settings.classReminderMinutes,
+                onSelect = onClassReminderChange
+            )
+        }
+        HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+        SettingRow(label = "Exam reminders", icon = Icons.Outlined.EditNote) {
+            Switch(checked = settings.examReminders, onCheckedChange = onExamRemindersChange)
+        }
+        HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+        SettingRow(label = "Payment deadlines", icon = Icons.Outlined.Payments) {
+            Switch(checked = settings.paymentDeadlines, onCheckedChange = onPaymentDeadlinesChange)
+        }
     }
-    HorizontalDivider(color = MaterialTheme.colorScheme.outline)
-    SettingRow(label = "Exam reminders", icon = Icons.Outlined.EditNote) {
-        Switch(checked = settings.examReminders, onCheckedChange = onExamRemindersChange)
-    }
-    HorizontalDivider(color = MaterialTheme.colorScheme.outline)
-    SettingRow(label = "Payment deadlines", icon = Icons.Outlined.Payments) {
-        Switch(checked = settings.paymentDeadlines, onCheckedChange = onPaymentDeadlinesChange)
-    }
-    HorizontalDivider(color = MaterialTheme.colorScheme.outline)
 }
 
 @Composable

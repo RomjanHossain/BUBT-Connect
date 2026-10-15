@@ -19,6 +19,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -76,13 +77,13 @@ fun ProfileSetupScreen(
                 .padding(horizontal = BubtSpacing.Screen)
         ) {
             OnboardingTopBar(
-                title = if (isEditing) "Edit profile" else "Let's set up your profile",
+                title = if (isEditing) "Edit profile" else "",
                 onBack = onBack,
                 trailing = {
                     if (!isEditing) {
                         Text(
                             text = "Step 1 of 2",
-                            style = MaterialTheme.typography.labelMedium,
+                            style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -100,6 +101,12 @@ fun ProfileSetupScreen(
                     .padding(top = BubtSpacing.Xl),
                 verticalArrangement = Arrangement.spacedBy(BubtSpacing.Lg)
             ) {
+                Text(
+                    text = if (isEditing) "Update your basic details." else "Let's set up your profile",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
                 Text(
                     text = if (isEditing) "Update your basic details." else "No account needed. You can connect Annex later.",
                     style = MaterialTheme.typography.bodyLarge,
