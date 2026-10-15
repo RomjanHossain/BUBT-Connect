@@ -39,6 +39,8 @@ import com.corethink.bubtconnect.data.model.ExamKind
 import com.corethink.bubtconnect.data.repository.ReminderRepository
 import com.corethink.bubtconnect.data.repository.SampleAcademicsRepository
 import com.corethink.bubtconnect.ui.components.BubtSegmentedControl
+import com.corethink.bubtconnect.ui.components.EmptyIllustration
+import com.corethink.bubtconnect.ui.components.EmptyState
 import com.corethink.bubtconnect.ui.components.showNotAvailableYet
 import com.corethink.bubtconnect.ui.design.BUBTConnectMaterial3Theme
 import com.corethink.bubtconnect.ui.design.BubtOutlinedButton
@@ -55,7 +57,8 @@ fun ExamsTab(viewModel: ExamsViewModel = viewModel()) {
         onSelectKind = viewModel::selectKind,
         onDownloadPdf = { showNotAvailableYet(context, "Exam PDF") },
         onDownloadAll = { showNotAvailableYet(context, "All exam PDFs") },
-        onToggleReminder = viewModel::toggleReminder
+        onToggleReminder = viewModel::toggleReminder,
+        onTurnOnAlerts = { showNotAvailableYet(context, "Exam alerts") }
     )
 }
 
@@ -66,7 +69,8 @@ fun ExamsContent(
     onSelectKind: (ExamKind) -> Unit,
     onDownloadPdf: (Exam) -> Unit,
     onDownloadAll: () -> Unit,
-    onToggleReminder: (Exam) -> Unit
+    onToggleReminder: (Exam) -> Unit,
+    onTurnOnAlerts: () -> Unit = {}
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -91,11 +95,20 @@ fun ExamsContent(
         }
         if (state.groups.isEmpty()) {
             item {
-                Text(
-                    text = "No ${state.kind.label.lowercase()} exams scheduled.",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(vertical = BubtSpacing.Lg)
+                EmptyState(
+                    illustration = EmptyIllustration.NoExams,
+                    title = "No upcoming exams 🎉",
+                    message = "No ${state.kind.label.lowercase()} exams for you this term. We'll notify you if one is scheduled.",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(440.dp),
+                    action = {
+                        BubtOutlinedButton(
+                            text = "Turn on exam alerts",
+                            onClick = onTurnOnAlerts,
+                            leadingIcon = Icons.Outlined.NotificationsNone
+                        )
+                    }
                 )
             }
         }

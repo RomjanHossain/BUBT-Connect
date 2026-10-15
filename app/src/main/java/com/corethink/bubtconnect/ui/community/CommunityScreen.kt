@@ -60,6 +60,9 @@ import com.corethink.bubtconnect.data.model.PostCategory
 import com.corethink.bubtconnect.data.repository.SampleCommunityRepository
 import com.corethink.bubtconnect.ui.community.CommunityViewModel.Companion.ANONYMOUS
 import com.corethink.bubtconnect.ui.community.CommunityViewModel.Companion.toItem
+import com.corethink.bubtconnect.ui.components.BubtButton
+import com.corethink.bubtconnect.ui.components.EmptyIllustration
+import com.corethink.bubtconnect.ui.components.EmptyState
 import com.corethink.bubtconnect.ui.components.FilterPill
 import com.corethink.bubtconnect.ui.components.formatCompactCount
 import com.corethink.bubtconnect.ui.components.formatDaysAgo
@@ -169,12 +172,25 @@ fun CommunityScreen(
             }
             if (state.posts.isEmpty()) {
                 item {
-                    Text(
-                        text = if (state.query.isBlank()) "Nothing shared here yet."
+                    EmptyState(
+                        illustration = EmptyIllustration.NoNotes,
+                        title = if (state.query.isBlank()) "No shared notes yet. Be the first!"
                         else "No posts match \"${state.query.trim()}\".",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(vertical = BubtSpacing.Lg)
+                        message = if (state.query.isBlank())
+                            "Nobody has shared a note here yet. Yours could help the next intake."
+                        else "Try a different search or filter.",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(460.dp),
+                        action = {
+                            if (state.query.isBlank()) {
+                                BubtButton(
+                                    text = "Share your notes",
+                                    onClick = onShare,
+                                    leadingIcon = Icons.Outlined.IosShare
+                                )
+                            }
+                        }
                     )
                 }
             }
