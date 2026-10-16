@@ -333,8 +333,8 @@ fun BubtTextField(
             unfocusedBorderColor = MaterialTheme.colorScheme.outline,
             errorBorderColor = BubtError,
             focusedContainerColor = MaterialTheme.colorScheme.surface,
-            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-            errorContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+            unfocusedContainerColor = MaterialTheme.colorScheme.surface, // 1j `.fld`: page background, not tonal
+            errorContainerColor = MaterialTheme.colorScheme.surface,
             focusedLabelColor = MaterialTheme.colorScheme.primary,
             unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
             errorLabelColor = BubtError,
