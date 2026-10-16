@@ -34,6 +34,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
@@ -183,6 +185,8 @@ private fun TimelineRow(
         )
 
         // Line and dot column (16dp)
+        val outline = MaterialTheme.colorScheme.outline
+        val glow = MaterialTheme.colorScheme.primaryContainer
         Box(
             modifier = Modifier
                 .width(16.dp)
@@ -193,25 +197,54 @@ private fun TimelineRow(
                 modifier = Modifier
                     .width(2.dp)
                     .fillMaxHeight()
-                    .background(MaterialTheme.colorScheme.outline)
+                    .background(outline)
             )
-            Box(
-                modifier = Modifier
-                    .padding(top = 16.dp)
-                    .size(if (isNow) 14.dp else 10.dp)
-                    .clip(CircleShape)
-                    .background(
-                        when {
-                            isNow -> MaterialTheme.colorScheme.primary
-                            isPast -> MaterialTheme.colorScheme.outline
-                            else -> MaterialTheme.colorScheme.background
-                        }
+            if (isNow) {
+                // 1h stepper "now" dot: `box-shadow:0 0 0 4px var(--pc)` — a primary-container
+                // ring with a soft radial falloff so it reads as a blurred halo.
+                Box(
+                    modifier = Modifier
+                        .padding(top = 12.dp)
+                        .size(22.dp)
+                        .drawBehind {
+                            val outer = 16.dp.toPx()
+                            drawCircle(
+                                brush = Brush.radialGradient(
+                                    colors = listOf(glow.copy(alpha = 0.55f), glow.copy(alpha = 0f)),
+                                    center = center,
+                                    radius = outer
+                                ),
+                                radius = outer
+                            )
+                            drawCircle(color = glow, radius = 11.dp.toPx())
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(14.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary)
                     )
-                    .then(
-                        if (!isNow && !isPast) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
-                        else Modifier
-                    )
-            )
+                }
+            } else {
+                Box(
+                    modifier = Modifier
+                        .padding(top = 16.dp)
+                        .size(10.dp)
+                        .clip(CircleShape)
+                        .background(
+                            when {
+                                isPast -> outline
+                                else -> MaterialTheme.colorScheme.background
+                            }
+                        )
+                        .then(
+                            if (!isPast) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
+                            else Modifier
+                        )
+                )
+            }
         }
 
         Spacer(modifier = Modifier.width(8.dp))
@@ -236,16 +269,18 @@ private fun ClassCard(
     reminderOn: Boolean,
     onToggleReminder: () -> Unit
 ) {
+    // Upcoming (future) slots read as a squarer, crisply outlined box — 1h's "upcoming" card.
+    val upcoming = !isNow && !isPast
     Surface(
         modifier = Modifier
             .fillMaxWidth()
             .graphicsLayer { alpha = if (isPast) 0.6f else 1f },
-        shape = RoundedCornerShape(16.dp),
+        shape = if (upcoming) RoundedCornerShape(12.dp) else RoundedCornerShape(16.dp),
         color = if (isNow) MaterialTheme.colorScheme.surface
         else if (isPast) MaterialTheme.colorScheme.surfaceContainer
         else MaterialTheme.colorScheme.surface,
         shadowElevation = if (isNow) 4.dp else 1.dp,
-        border = if (!isNow && !isPast) BorderStroke(1.dp, MaterialTheme.colorScheme.outline) else null
+        border = if (upcoming) BorderStroke(1.5.dp, MaterialTheme.colorScheme.outline) else null
     ) {
         Column(
             modifier = Modifier.padding(14.dp),
