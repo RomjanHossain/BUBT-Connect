@@ -1,3 +1,42 @@
+import java.net.URI
+import org.gradle.api.DefaultTask
+import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.TaskAction
+
+// Downloads the FairScan document-segmentation model (GPLv3, pynicolas/fairscan-segmentation-model)
+// into the APK assets at build time — same approach as FairScan itself.
+abstract class DownloadTFLiteModelTask : DefaultTask() {
+    @get:OutputDirectory
+    abstract val outputDirectory: DirectoryProperty
+
+    @TaskAction
+    fun download() {
+        val modelVersion = "v1.2.0"
+        val modelFileName = "fairscan-segmentation-model.tflite"
+        val modelUrl = "https://github.com/pynicolas/fairscan-segmentation-model/releases/download/$modelVersion/$modelFileName"
+
+        val outputFile = outputDirectory.file(modelFileName).get().asFile
+
+        if (!outputFile.exists()) {
+            println("Downloading $modelFileName from $modelUrl")
+            outputFile.parentFile.mkdirs()
+
+            URI(modelUrl).toURL().openStream().use { input ->
+                outputFile.outputStream().use { output ->
+                    input.copyTo(output)
+                }
+            }
+        } else {
+            println("Model already downloaded: ${outputFile.absolutePath}")
+        }
+    }
+}
+
+val downloadTFLiteModel = tasks.register<DownloadTFLiteModelTask>("downloadTFLiteModel") {
+    outputDirectory.set(layout.buildDirectory.dir("downloads/tflite"))
+}
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -11,7 +50,8 @@ android {
 
     defaultConfig {
         applicationId = "com.corethink.bubtconnect"
-        minSdk = 24
+        // LiteRT (document segmentation) needs API 26; matches FairScan's floor.
+        minSdk = 26
         targetSdk = 37
         versionCode = 1
         versionName = "1.0"
@@ -36,6 +76,15 @@ android {
     }
 }
 
+androidComponents {
+    onVariants { variant ->
+        variant.sources.assets?.addGeneratedSourceDirectory(
+            downloadTFLiteModel,
+            DownloadTFLiteModelTask::outputDirectory,
+        )
+    }
+}
+
 dependencies {
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
@@ -55,6 +104,15 @@ dependencies {
     implementation(libs.androidx.camera.camera2)
     implementation(libs.androidx.camera.lifecycle)
     implementation(libs.androidx.camera.view)
+    // Scanning stack (FairScan, GPLv3 — same license as this app): LiteRT segmentation model,
+    // OpenCV quad extraction / perspective warp / enhancement.
+    implementation(project(":imageprocessing")) {
+        exclude(group = "org.openpnp", module = "opencv")
+    }
+    implementation(libs.opencv)
+    implementation(libs.litert)
+    implementation(libs.litert.support)
+    implementation(libs.litert.metadata)
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)

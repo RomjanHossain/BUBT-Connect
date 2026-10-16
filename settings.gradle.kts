@@ -24,4 +24,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "Bubt Connect"
 include(":app")
+include(":imageprocessing")
  
