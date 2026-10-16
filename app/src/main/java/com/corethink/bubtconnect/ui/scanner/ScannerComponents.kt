@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
@@ -31,7 +32,6 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
@@ -41,6 +41,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.corethink.bubtconnect.data.model.CoverDetails
 import com.corethink.bubtconnect.data.model.CoverTemplate
 import com.corethink.bubtconnect.data.model.ScanPage
@@ -123,17 +124,46 @@ fun CoverPreview(template: CoverTemplate, details: CoverDetails, modifier: Modif
     }
 }
 
-/** Full-size cover over a scrim; tap anywhere to close. */
+/** Full-screen cover on a scrim; tap anywhere or hit × to close. */
 @Composable
 fun CoverPreviewDialog(template: CoverTemplate, details: CoverDetails, onDismiss: () -> Unit) {
-    Dialog(onDismissRequest = onDismiss) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
         Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .clip(BubtShapes.Skeleton)
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.88f))
                 .clickable(onClick = onDismiss)
+                .padding(BubtSpacing.Screen),
+            contentAlignment = Alignment.Center
         ) {
-            CoverPreview(template, details, Modifier.fillMaxWidth())
+            Surface(
+                onClick = onDismiss,
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.surface,
+                shadowElevation = 4.dp,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = BubtSpacing.Md)
+                    .size(40.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Filled.Close,
+                        contentDescription = "Close preview",
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+            CoverPreview(
+                template = template,
+                details = details,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(PageAspectRatio)
+            )
         }
     }
 }
