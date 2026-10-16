@@ -22,6 +22,7 @@ import com.corethink.bubtconnect.data.scan.DocumentPipeline
 import com.corethink.bubtconnect.data.scan.ProcessedPage
 import com.corethink.bubtconnect.data.scan.QuadStabilizer
 import com.corethink.bubtconnect.data.scan.ScanPdfWriter
+import org.fairscan.imageprocessing.ColorMode
 import org.fairscan.imageprocessing.ImageSize
 import org.fairscan.imageprocessing.Mode
 import org.fairscan.imageprocessing.Quad
@@ -55,6 +56,7 @@ data class ScannerUiState(
     val fileName: String = "",
     val isMerging: Boolean = false,
     val isProcessing: Boolean = false,
+    val processingPageId: Long? = null,
     val mergeError: String? = null,
     val result: ScanResult? = null,
     val publishToCommunity: Boolean = true,
@@ -242,7 +244,8 @@ class ScannerViewModel(application: Application) : AndroidViewModel(application)
                         ScanPage(
                             id = nextPageId++,
                             uri = Uri.fromFile(page.file).toString(),
-                            sourceUri = Uri.fromFile(page.sourceFile).toString()
+                            sourceUri = Uri.fromFile(page.sourceFile).toString(),
+                            quad = page.normalizedQuad
                         )
                     }
                 )
@@ -272,7 +275,43 @@ class ScannerViewModel(application: Application) : AndroidViewModel(application)
 
     fun rotateSelected() = editSelected { it.copy(rotation = (it.rotation + 90) % 360) }
 
-    fun toggleFilterSelected() = editSelected { it.copy(grayscale = !it.grayscale) }
+    /** Re-warps the stored original with the corners the user dragged in the crop editor. */
+    fun applyCrop(quad: Quad) {
+        val page = _uiState.value.selectedPage ?: return
+        editSelected { it.copy(quad = quad) }
+        reprocessPage(page.id)
+    }
+
+    /** Auto / Color / Grayscale / B&W; null means back to the auto-detected mode. */
+    fun setPageColorMode(mode: ColorMode?) {
+        val page = _uiState.value.selectedPage ?: return
+        if (page.colorMode == mode) return
+        editSelected { it.copy(colorMode = mode) }
+        reprocessPage(page.id)
+    }
+
+    private fun reprocessPage(pageId: Long) {
+        val page = _uiState.value.pages.firstOrNull { it.id == pageId } ?: return
+        val sourcePath = page.sourceUri?.let { Uri.parse(it).path } ?: return
+        viewModelScope.launch {
+            _uiState.update { it.copy(processingPageId = pageId) }
+            val processed = runCatching {
+                val base = File(scanDir, "pages/${pageId}_v${System.currentTimeMillis()}")
+                pipeline.reprocess(File(sourcePath), base, page.quad, page.colorMode)
+            }.onFailure {
+                Log.e("Scanner", "Page reprocessing failed", it)
+            }.getOrNull()
+            if (processed != null) {
+                val newUri = Uri.fromFile(processed.file).toString()
+                _uiState.update { state ->
+                    state.copy(
+                        pages = state.pages.map { if (it.id == pageId) it.copy(uri = newUri) else it }
+                    )
+                }
+            }
+            _uiState.update { it.copy(processingPageId = null) }
+        }
+    }
 
     fun deleteSelected() {
         _uiState.update { state ->

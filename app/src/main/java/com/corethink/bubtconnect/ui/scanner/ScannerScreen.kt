@@ -58,7 +58,6 @@ import com.corethink.bubtconnect.data.model.CoverDetails
 import com.corethink.bubtconnect.data.model.CoverTemplate
 import com.corethink.bubtconnect.data.model.SimpleDate
 import com.corethink.bubtconnect.ui.components.dashedBorder
-import com.corethink.bubtconnect.ui.components.showNotAvailableYet
 import com.corethink.bubtconnect.ui.design.BUBTConnectMaterial3Theme
 import com.corethink.bubtconnect.ui.design.BubtPrimaryButton
 import com.corethink.bubtconnect.ui.design.BubtShapes
@@ -116,9 +115,9 @@ fun ScannerRoute(onClose: () -> Unit, viewModel: ScannerViewModel = viewModel())
             onSelectPage = viewModel::selectPage,
             onMovePage = viewModel::movePage,
             onAddPages = viewModel::addMorePages,
-            onCrop = { showNotAvailableYet(context, "Cropping") },
+            onCrop = viewModel::applyCrop,
             onRotate = viewModel::rotateSelected,
-            onFilter = viewModel::toggleFilterSelected,
+            onColorMode = viewModel::setPageColorMode,
             onDelete = viewModel::deleteSelected,
             onFileNameChange = viewModel::onFileNameChange,
             onMerge = viewModel::next

@@ -21,8 +21,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.outlined.Crop
 import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.FilterBAndW
 import androidx.compose.material.icons.outlined.RotateRight
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -38,6 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
@@ -49,6 +50,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.corethink.bubtconnect.data.model.CoverDetails
 import com.corethink.bubtconnect.data.model.ScanPage
+import com.corethink.bubtconnect.ui.components.BubtSegmentedControl
 import com.corethink.bubtconnect.ui.components.dashedBorder
 import com.corethink.bubtconnect.ui.design.BUBTConnectMaterial3Theme
 import com.corethink.bubtconnect.ui.design.BubtPrimaryButton
@@ -56,6 +58,8 @@ import com.corethink.bubtconnect.ui.design.BubtShapes
 import com.corethink.bubtconnect.ui.design.BubtSpacing
 import com.corethink.bubtconnect.ui.design.BubtTextField
 import com.corethink.bubtconnect.ui.design.bubtErrorText
+import org.fairscan.imageprocessing.ColorMode
+import org.fairscan.imageprocessing.Quad
 import kotlin.math.roundToInt
 
 private const val GridColumns = 3
@@ -69,9 +73,9 @@ fun ReviewStep(
     onSelectPage: (Long) -> Unit,
     onMovePage: (Int, Int) -> Unit,
     onAddPages: () -> Unit,
-    onCrop: () -> Unit,
+    onCrop: (Quad) -> Unit,
     onRotate: () -> Unit,
-    onFilter: () -> Unit,
+    onColorMode: (ColorMode?) -> Unit,
     onDelete: () -> Unit,
     onFileNameChange: (String) -> Unit,
     onMerge: () -> Unit
@@ -105,17 +109,41 @@ fun ReviewStep(
 
         HorizontalDivider(color = MaterialTheme.colorScheme.outline, modifier = Modifier.padding(vertical = BubtSpacing.Md))
         val selected = state.selectedPage
+        val editing = state.processingPageId != null
+        var cropping by remember { mutableStateOf(false) }
         Row(horizontalArrangement = Arrangement.spacedBy(BubtSpacing.Lg)) {
-            ToolButton(Icons.Outlined.Crop, "Crop", enabled = selected != null, onClick = onCrop)
-            ToolButton(Icons.Outlined.RotateRight, "Rotate", enabled = selected != null, onClick = onRotate)
             ToolButton(
-                Icons.Outlined.FilterBAndW,
-                "Filter",
-                enabled = selected != null,
-                active = selected?.grayscale == true,
-                onClick = onFilter
+                Icons.Outlined.Crop,
+                "Crop",
+                enabled = selected != null && selected.sourceUri != null && !editing,
+                onClick = { cropping = true }
             )
-            ToolButton(Icons.Outlined.Delete, "Delete", enabled = selected != null, onClick = onDelete)
+            ToolButton(Icons.Outlined.RotateRight, "Rotate", enabled = selected != null && !editing, onClick = onRotate)
+            ToolButton(Icons.Outlined.Delete, "Delete", enabled = selected != null && !editing, onClick = onDelete)
+        }
+        if (selected != null) {
+            Text(
+                text = "Color mode",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = BubtSpacing.Md)
+            )
+            BubtSegmentedControl(
+                options = PageMode.entries,
+                selected = PageMode.from(selected),
+                label = { it.label },
+                onSelect = { onColorMode(it.toColorMode()) }
+            )
+        }
+        if (cropping && selected != null) {
+            CropPageDialog(
+                page = selected,
+                onConfirm = { quad ->
+                    cropping = false
+                    onCrop(quad)
+                },
+                onDismiss = { cropping = false }
+            )
         }
         HorizontalDivider(color = MaterialTheme.colorScheme.outline, modifier = Modifier.padding(vertical = BubtSpacing.Md))
 
@@ -222,6 +250,7 @@ private fun PageGrid(
                                         page = cell.page,
                                         height = tileHeight,
                                         selected = cell.page.id == state.selectedPageId,
+                                        busy = state.processingPageId == cell.page.id,
                                         onClick = { onSelectPage(cell.page.id) }
                                     )
                                 }
@@ -281,9 +310,8 @@ private fun CoverTile(state: ScannerUiState, height: Dp, onClick: () -> Unit) {
 }
 
 @Composable
-private fun PageTile(page: ScanPage, height: Dp, selected: Boolean, onClick: () -> Unit) {
-    PageThumbnail(
-        page = page,
+private fun PageTile(page: ScanPage, height: Dp, selected: Boolean, busy: Boolean, onClick: () -> Unit) {
+    Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(height)
@@ -294,7 +322,21 @@ private fun PageTile(page: ScanPage, height: Dp, selected: Boolean, onClick: () 
                 shape = BubtShapes.Field
             )
             .clickable(onClickLabel = if (selected) "Deselect page" else "Select page", onClick = onClick)
-    )
+            .clipToBounds()
+    ) {
+        PageThumbnail(page = page, modifier = Modifier.fillMaxSize())
+        if (busy) {
+            // Reprocessing (crop / color mode) redraws the page from the original.
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.25f)),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+            }
+        }
+    }
 }
 
 @Composable
@@ -350,6 +392,30 @@ private fun summary(state: ScannerUiState): String {
     return if (state.template.hasCover) "Cover + $pageText" else pageText
 }
 
+/** Per-page color mode chips; Auto re-detects from the original photo. */
+private enum class PageMode(val label: String) {
+    Auto("Auto"),
+    Color("Color"),
+    Grayscale("Gray"),
+    BlackAndWhite("B&W");
+
+    fun toColorMode(): ColorMode? = when (this) {
+        Auto -> null
+        Color -> ColorMode.COLOR
+        Grayscale -> ColorMode.GRAYSCALE
+        BlackAndWhite -> ColorMode.BLACK_AND_WHITE
+    }
+
+    companion object {
+        fun from(page: ScanPage): PageMode = when (page.colorMode) {
+            null -> Auto
+            ColorMode.COLOR -> Color
+            ColorMode.GRAYSCALE -> Grayscale
+            ColorMode.BLACK_AND_WHITE -> BlackAndWhite
+        }
+    }
+}
+
 @Preview(showBackground = true, heightDp = 800)
 @Composable
 private fun ReviewStepPreview() {
@@ -368,7 +434,7 @@ private fun ReviewStepPreview() {
                 onAddPages = {},
                 onCrop = {},
                 onRotate = {},
-                onFilter = {},
+                onColorMode = {},
                 onDelete = {},
                 onFileNameChange = {},
                 onMerge = {}

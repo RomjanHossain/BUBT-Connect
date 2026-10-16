@@ -28,6 +28,7 @@ import org.fairscan.imageprocessing.Mode
 import org.fairscan.imageprocessing.Quad
 import org.fairscan.imageprocessing.autoColorMode
 import org.fairscan.imageprocessing.detectDocumentQuad
+import org.fairscan.imageprocessing.enhanceCapturedImage
 import org.fairscan.imageprocessing.extractDocument
 import org.fairscan.imageprocessing.resizeForMaxPixels
 import org.fairscan.imageprocessing.scaledTo
@@ -126,11 +127,64 @@ class DocumentPipeline(private val context: Context) {
             }
             bgr.release()
 
-            writePage(page, outFile, colorMode)
+            val file = pageFile(outFile, colorMode)
+            writePage(page, file, colorMode)
             page.release()
 
-            ProcessedPage(outFile, sourceFile, normalizedQuad, colorMode)
+            ProcessedPage(file, sourceFile, normalizedQuad, colorMode)
         }
+
+    /**
+     * Re-warps the stored original with a user-adjusted [quad] and color mode, as the
+     * Review editor does after a crop or a color-mode change. [colorMode] null re-runs
+     * the auto-detection (the "Auto" chip in Review).
+     */
+    suspend fun reprocess(
+        sourceFile: File,
+        outBase: File,
+        quad: Quad?,
+        colorMode: ColorMode?
+    ): ProcessedPage = withContext(Dispatchers.IO) {
+        ensureReady()
+        val bitmap = decodeUpright(sourceFile)
+            ?: error("Couldn't read ${sourceFile.name}")
+
+        val rgba = Mat()
+        Utils.bitmapToMat(bitmap, rgba)
+        val bgr = Mat()
+        Imgproc.cvtColor(rgba, bgr, Imgproc.COLOR_RGBA2BGR)
+        rgba.release()
+
+        val quadInImage = quad?.scaledTo(1, 1, bgr.width(), bgr.height())
+        val resolvedMode = colorMode ?: autoDetectMode(bitmap, bgr, quadInImage)
+        bitmap.recycle()
+
+        val page = if (quadInImage == null) {
+            enhanceCapturedImage(resizeForMaxPixels(bgr, MAX_PIXELS.toDouble()), resolvedMode, MAX_PIXELS)
+        } else {
+            extractDocument(bgr, quadInImage, 0, resolvedMode, MAX_PIXELS)
+        }
+        bgr.release()
+
+        val file = pageFile(outBase, resolvedMode)
+        writePage(page, file, resolvedMode)
+        page.release()
+
+        ProcessedPage(file, sourceFile, quad, resolvedMode)
+    }
+
+    /** Runs the bundled model again to reproduce the capture-time "auto" decision. */
+    private suspend fun autoDetectMode(bitmap: Bitmap, bgr: Mat, quad: Quad?): ColorMode {
+        val mask = segmentation.runSegmentationAndReturn(bitmap)?.segmentation ?: return ColorMode.COLOR
+        return if (quad != null) autoColorMode(bgr, mask, quad) else ColorMode.COLOR
+    }
+
+    /** B&W pages become lossless PNGs; everything else stays JPEG. */
+    private fun pageFile(base: File, colorMode: ColorMode): File =
+        File(
+            base.parentFile,
+            base.nameWithoutExtension + if (colorMode == ColorMode.BLACK_AND_WHITE) ".png" else ".jpg"
+        )
 
     private fun writePage(page: Mat, outFile: File, colorMode: ColorMode) {
         val bitmap = Bitmap.createBitmap(page.cols(), page.rows(), Bitmap.Config.ARGB_8888)

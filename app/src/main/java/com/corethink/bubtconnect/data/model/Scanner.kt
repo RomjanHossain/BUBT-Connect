@@ -1,5 +1,8 @@
 package com.corethink.bubtconnect.data.model
 
+import org.fairscan.imageprocessing.ColorMode
+import org.fairscan.imageprocessing.Quad
+
 /** Cover templates offered on 1m. [heading] is the big title printed on the cover. */
 enum class CoverTemplate(val label: String, val heading: String) {
     Assignment("Assignment", "ASSIGNMENT"),
@@ -28,11 +31,15 @@ data class CoverDetails(
 /**
  * One scanned or imported page. [uri] is the straightened, enhanced page image; [sourceUri]
  * keeps the raw photo (from the camera or gallery) so Review can re-crop from the original.
+ * [quad] is the page outline in the source photo (normalized 0..1), [colorMode] the
+ * user-chosen color mode (null = auto-detected at capture).
  */
 data class ScanPage(
     val id: Long,
     val uri: String,
     val rotation: Int = 0,
     val grayscale: Boolean = false,
-    val sourceUri: String? = null
+    val sourceUri: String? = null,
+    val quad: Quad? = null,
+    val colorMode: ColorMode? = null
 )
