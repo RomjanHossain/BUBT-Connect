@@ -529,7 +529,9 @@ private fun QuickActionRowTile(
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
+                // `1g` lets the label wrap ("Academic Calendar" runs onto two lines)
+                // instead of ellipsizing it.
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f)
             )
