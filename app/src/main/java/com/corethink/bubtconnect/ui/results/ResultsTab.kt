@@ -1,6 +1,5 @@
 package com.corethink.bubtconnect.ui.results
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -21,8 +20,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.automirrored.filled.TrendingDown
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material3.HorizontalDivider
@@ -35,6 +32,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -42,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.corethink.bubtconnect.data.model.CourseGrade
+import com.corethink.bubtconnect.data.model.Grade
 import com.corethink.bubtconnect.data.model.SemesterResult
 import com.corethink.bubtconnect.data.repository.SampleAcademicsRepository
 import com.corethink.bubtconnect.ui.components.formatGpa
@@ -50,6 +49,8 @@ import com.corethink.bubtconnect.ui.design.BUBTConnectMaterial3Theme
 import com.corethink.bubtconnect.ui.design.BubtShapes
 import com.corethink.bubtconnect.ui.design.BubtSpacing
 import com.corethink.bubtconnect.ui.design.BubtSuccess
+import com.corethink.bubtconnect.ui.design.BubtTag
+import com.corethink.bubtconnect.ui.design.BubtTagStyle
 import com.corethink.bubtconnect.ui.onboarding.BubtDropdownField
 
 @Composable
@@ -57,8 +58,7 @@ fun ResultsTab(viewModel: ResultsViewModel = viewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     ResultsContent(
         state = state,
-        onSelectSemester = viewModel::selectSemester,
-        onToggleCourse = viewModel::toggleCourse
+        onSelectSemester = viewModel::selectSemester
     )
 }
 
@@ -66,8 +66,7 @@ fun ResultsTab(viewModel: ResultsViewModel = viewModel()) {
 @Composable
 fun ResultsContent(
     state: ResultsUiState,
-    onSelectSemester: (Int) -> Unit,
-    onToggleCourse: (String) -> Unit
+    onSelectSemester: (Int) -> Unit
 ) {
     val selected = state.selected ?: return
     Column(
@@ -89,7 +88,7 @@ fun ResultsContent(
             sgpa = selected.sgpa,
             sgpaDelta = state.sgpaDelta,
             cgpa = state.cgpa,
-            credits = formatCredits(state.totalCredits)
+            credits = "${formatCredits(state.totalCredits)} credits"
         )
 
         SgpaHistory(
@@ -105,13 +104,10 @@ fun ResultsContent(
             modifier = Modifier.padding(top = BubtSpacing.Sm)
         )
         Column {
-            selected.grades.forEach { grade ->
-                GradeRow(
-                    grade = grade,
-                    expanded = state.expandedCourse == grade.course.code,
-                    onToggle = { onToggleCourse(grade.course.code) }
-                )
-                HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+            selected.grades.forEachIndexed { index, grade ->
+                // 1j: flat rows separated by a divider — no expansion tile, no trailing rule.
+                if (index > 0) HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+                GradeRow(grade = grade)
             }
         }
     }
@@ -225,7 +221,8 @@ private fun SgpaHistory(
                 Text(
                     text = "SGPA history",
                     style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.weight(1f)
                 )
                 Text(
@@ -272,7 +269,7 @@ private fun SgpaHistory(
                     }
                 }
             }
-            HorizontalDivider(color = MaterialTheme.colorScheme.onSurfaceVariant)
+            // 1j: labels sit directly under the bars — no rule between them.
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -293,49 +290,40 @@ private fun SgpaHistory(
     }
 }
 
+/** 1j course grade row: title, `CODE · N cr`, and the letter grade as a tag — never expands. */
 @Composable
-private fun GradeRow(grade: CourseGrade, expanded: Boolean, onToggle: () -> Unit) {
-    Column(
+private fun GradeRow(grade: CourseGrade) {
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onToggle)
-            .padding(vertical = BubtSpacing.Md)
+            .padding(vertical = BubtSpacing.Md),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = grade.course.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    text = "${grade.course.code} · ${formatCredits(grade.credits)} cr",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+        Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = grade.grade.label,
+                text = grade.course.title,
                 style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
-            Icon(
-                imageVector = if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
-                contentDescription = if (expanded) "Collapse" else "Expand",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-        AnimatedVisibility(visible = expanded) {
             Text(
-                text = "Grade point ${formatGpa(grade.grade.point)}",
+                text = "${grade.course.code} · ${formatCredits(grade.credits)} cr",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = BubtSpacing.Xs)
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
+        Spacer(modifier = Modifier.width(BubtSpacing.Sm))
+        BubtTag(text = grade.grade.label, style = gradeTagStyle(grade.grade))
     }
+}
+
+/** Tag palette for grade letters: 1j paints the A-range with the success container. */
+private fun gradeTagStyle(grade: Grade): BubtTagStyle = when {
+    grade.point >= 3.50 -> BubtTagStyle.Success // A-, A, A+
+    grade.point >= 2.75 -> BubtTagStyle.Neutral  // B+, B, B-
+    grade.point >= 2.00 -> BubtTagStyle.Warning  // C+, C, D
+    else -> BubtTagStyle.Supplementary           // F
 }
 
 @Preview(showBackground = true, heightDp = 900)
@@ -346,8 +334,7 @@ private fun ResultsContentPreview() {
         Surface(color = MaterialTheme.colorScheme.background) {
             ResultsContent(
                 state = ResultsUiState(isConnected = true, semesters = semesters, selectedIndex = semesters.lastIndex),
-                onSelectSemester = {},
-                onToggleCourse = {}
+                onSelectSemester = {}
             )
         }
     }

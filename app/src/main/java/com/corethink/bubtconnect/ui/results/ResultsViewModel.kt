@@ -16,8 +16,7 @@ import kotlinx.coroutines.flow.stateIn
 data class ResultsUiState(
     val isConnected: Boolean = false,
     val semesters: List<SemesterResult> = emptyList(),
-    val selectedIndex: Int = 0,
-    val expandedCourse: String? = null
+    val selectedIndex: Int = 0
 ) {
     val selected: SemesterResult? get() = semesters.getOrNull(selectedIndex)
 
@@ -40,14 +39,12 @@ class ResultsViewModel(
 
     private val semesters = repository.results()
     private val selectedIndex = MutableStateFlow(semesters.lastIndex)
-    private val expandedCourse = MutableStateFlow<String?>(null)
 
     val uiState: StateFlow<ResultsUiState> = combine(
         profileRepository.annexConnected,
-        selectedIndex,
-        expandedCourse
-    ) { connected, index, expanded ->
-        ResultsUiState(connected, semesters, index, expanded)
+        selectedIndex
+    ) { connected, index ->
+        ResultsUiState(connected, semesters, index)
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
@@ -60,10 +57,5 @@ class ResultsViewModel(
 
     fun selectSemester(index: Int) {
         selectedIndex.value = index
-        expandedCourse.value = null
-    }
-
-    fun toggleCourse(code: String) {
-        expandedCourse.value = if (expandedCourse.value == code) null else code
     }
 }
