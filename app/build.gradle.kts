@@ -74,6 +74,17 @@ android {
     buildFeatures {
         compose = true
     }
+
+    // OpenCV ships native libraries for every ABI; split APKs so installs stay ~40 MB
+    // instead of one 190 MB package (FairScan splits the same way).
+    splits {
+        abi {
+            isEnable = true
+            isUniversalApk = false
+            reset()
+            include("arm64-v8a", "armeabi-v7a", "x86_64")
+        }
+    }
 }
 
 androidComponents {
