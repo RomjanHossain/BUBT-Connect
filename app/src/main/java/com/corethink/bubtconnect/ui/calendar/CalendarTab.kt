@@ -34,6 +34,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -48,10 +49,19 @@ import com.corethink.bubtconnect.data.repository.SampleAcademicsRepository
 import com.corethink.bubtconnect.ui.components.FilterPill
 import com.corethink.bubtconnect.ui.components.dashedBorder
 import com.corethink.bubtconnect.ui.design.BUBTConnectMaterial3Theme
+import com.corethink.bubtconnect.ui.design.BubtBackgroundLight
+import com.corethink.bubtconnect.ui.design.BubtOnSuccessContainerDark
+import com.corethink.bubtconnect.ui.design.BubtOnSuccessContainerLight
+import com.corethink.bubtconnect.ui.design.BubtOnWarningContainerDark
+import com.corethink.bubtconnect.ui.design.BubtOnWarningContainerLight
 import com.corethink.bubtconnect.ui.design.BubtShapes
 import com.corethink.bubtconnect.ui.design.BubtSpacing
 import com.corethink.bubtconnect.ui.design.BubtSuccess
+import com.corethink.bubtconnect.ui.design.BubtSuccessContainerDark
+import com.corethink.bubtconnect.ui.design.BubtSuccessContainerLight
 import com.corethink.bubtconnect.ui.design.BubtWarning
+import com.corethink.bubtconnect.ui.design.BubtWarningContainerDark
+import com.corethink.bubtconnect.ui.design.BubtWarningContainerLight
 
 @Composable
 fun CalendarTab(
@@ -222,47 +232,56 @@ private fun EventRow(
     onSeeExamRoutine: () -> Unit,
     onOpenFees: () -> Unit
 ) {
-    val muted = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .height(IntrinsicSize.Min)
     ) {
+        // 1l timeline rail: 40px icon column with the rule centred behind the badges.
         Box(
             modifier = Modifier
-                .width(20.dp)
+                .width(40.dp)
                 .fillMaxHeight(),
             contentAlignment = Alignment.TopCenter
         ) {
             if (!(isFirst && isLast)) {
                 Box(
                     modifier = Modifier
-                        .padding(top = if (isFirst) 22.dp else 0.dp)
-                        .width(1.5.dp)
-                        .then(if (isLast) Modifier.height(22.dp) else Modifier.fillMaxHeight())
+                        .padding(top = if (isFirst) 20.dp else 0.dp)
+                        .width(2.dp)
+                        .then(if (isLast) Modifier.height(20.dp) else Modifier.fillMaxHeight())
                         .background(MaterialTheme.colorScheme.outline)
                 )
             }
-            Box(modifier = Modifier.padding(top = 12.dp)) {
-                EventIcon(event.type, muted = isPast)
-            }
+            EventIcon(event.type, muted = isPast)
         }
         Box(
             modifier = Modifier
                 .weight(1f)
-                .padding(start = BubtSpacing.Sm, bottom = BubtSpacing.Md)
+                .padding(start = 14.dp, bottom = BubtSpacing.Md) // 1l column gap
         ) {
             if (isPast) {
-                Column(modifier = Modifier.padding(vertical = BubtSpacing.Md)) {
+                // 1l fades the whole past block to 60%; the title keeps the on-surface colour
+                // so it stays readable instead of washing out twice.
+                Column(
+                    modifier = Modifier
+                        .padding(vertical = BubtSpacing.Md)
+                        .alpha(0.6f)
+                ) {
                     Text(
                         text = badgeLabel(event),
                         style = MaterialTheme.typography.labelMedium,
-                        color = muted
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
                         text = event.title,
                         style = MaterialTheme.typography.titleSmall,
-                        color = muted
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = event.note,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             } else {
@@ -274,20 +293,32 @@ private fun EventRow(
 
 @Composable
 private fun EventIcon(type: CalendarEventType, muted: Boolean = false) {
-    val color = if (muted) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f) else typeColor(type)
-    Surface(
-        shape = CircleShape,
-        color = color.copy(alpha = 0.12f),
-        modifier = Modifier.size(28.dp)
+    val dark = MaterialTheme.colorScheme.background != BubtBackgroundLight
+    val (background, tint) = when {
+        muted -> MaterialTheme.colorScheme.surfaceContainer to MaterialTheme.colorScheme.onSurfaceVariant
+        type == CalendarEventType.Payment ->
+            (if (dark) BubtWarningContainerDark else BubtWarningContainerLight) to
+                (if (dark) BubtOnWarningContainerDark else BubtOnWarningContainerLight)
+        type == CalendarEventType.Exam ->
+            MaterialTheme.colorScheme.primaryContainer to MaterialTheme.colorScheme.primary
+        else ->
+            (if (dark) BubtSuccessContainerDark else BubtSuccessContainerLight) to
+                (if (dark) BubtOnSuccessContainerDark else BubtOnSuccessContainerLight)
+    }
+    // 1l: a 40dp circle with a solid container fill and the icon centred inside it.
+    Box(
+        modifier = Modifier
+            .size(40.dp)
+            .clip(CircleShape)
+            .background(background),
+        contentAlignment = Alignment.Center
     ) {
-        Box(contentAlignment = Alignment.Center) {
-            Icon(
-                imageVector = typeIcon(type),
-                contentDescription = type.label,
-                tint = color,
-                modifier = Modifier.size(16.dp)
-            )
-        }
+        Icon(
+            imageVector = typeIcon(type),
+            contentDescription = type.label,
+            tint = tint,
+            modifier = Modifier.size(20.dp)
+        )
     }
 }
 
@@ -299,45 +330,42 @@ private fun EventCard(event: CalendarEvent, onSeeExamRoutine: () -> Unit, onOpen
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
     ) {
-        Row(modifier = Modifier.padding(horizontal = BubtSpacing.CardPadding, vertical = BubtSpacing.Md)) {
-            EventIcon(type = event.type)
-            Spacer(modifier = Modifier.width(BubtSpacing.Md))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = badgeLabel(event),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = typeColor(event.type)
-                )
-                Text(
-                    text = event.title,
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = event.endDate?.let { "${event.note} · ${event.date.shortLabel} – ${it.shortLabel}" } ?: event.note,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                val action = when (event.type) {
-                    CalendarEventType.Exam -> "See routine" to onSeeExamRoutine
-                    CalendarEventType.Payment -> "View fees" to onOpenFees
-                    CalendarEventType.Holiday -> null
-                }
-                action?.let { (label, onClick) ->
-                    Spacer(modifier = Modifier.height(BubtSpacing.Sm))
-                    Surface(
-                        onClick = onClick,
-                        shape = BubtShapes.Chip,
-                        color = MaterialTheme.colorScheme.surface,
-                        contentColor = MaterialTheme.colorScheme.primary,
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
-                    ) {
-                        Text(
-                            text = "$label →",
-                            style = MaterialTheme.typography.labelMedium,
-                            modifier = Modifier.padding(horizontal = BubtSpacing.Md, vertical = BubtSpacing.Xs + 2.dp)
-                        )
-                    }
+        // 1l cards carry no type badge icon — the rail on the left already shows it.
+        Column(modifier = Modifier.padding(horizontal = BubtSpacing.CardPadding, vertical = BubtSpacing.Md)) {
+            Text(
+                text = badgeLabel(event),
+                style = MaterialTheme.typography.labelMedium,
+                color = typeColor(event.type)
+            )
+            Text(
+                text = event.title,
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = event.endDate?.let { "${event.note} · ${event.date.shortLabel} – ${it.shortLabel}" } ?: event.note,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            val action = when (event.type) {
+                CalendarEventType.Exam -> "See routine" to onSeeExamRoutine
+                CalendarEventType.Payment -> "View fees" to onOpenFees
+                CalendarEventType.Holiday -> null
+            }
+            action?.let { (label, onClick) ->
+                Spacer(modifier = Modifier.height(BubtSpacing.Sm))
+                Surface(
+                    onClick = onClick,
+                    shape = BubtShapes.Chip,
+                    color = MaterialTheme.colorScheme.surface,
+                    contentColor = MaterialTheme.colorScheme.primary,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+                ) {
+                    Text(
+                        text = "$label →",
+                        style = MaterialTheme.typography.labelMedium,
+                        modifier = Modifier.padding(horizontal = BubtSpacing.Md, vertical = BubtSpacing.Xs + 2.dp)
+                    )
                 }
             }
         }
