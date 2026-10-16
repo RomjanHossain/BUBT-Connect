@@ -17,18 +17,23 @@ import java.util.Locale
 
 /**
  * Draws a cover onto an A4 canvas measured in PDF points (595 × 842).
- * The live preview (1n) and the generated PDF both call this, so what you see is what you get.
+ * The live preview (1p) and the generated PDF both call this, so what you see is what you get.
+ *
+ * Layout follows the BUBT standard cover (the shape bubtcoverpage.vercel.app produces):
+ * double frame → crest and university name → document-type badge → course rows →
+ * bordered Submitted By / Submitted To cards → "Date of Submission" footer.
  */
 object CoverRenderer {
     const val PAGE_WIDTH = 595
     const val PAGE_HEIGHT = 842
 
-    private const val MARGIN = 28f
+    private const val FRAME = 22f
+    private const val FRAME_INNER = 34f
+    private const val MARGIN = 56f
     private const val UNIVERSITY = "Bangladesh University of Business and Technology"
 
     private val ink = Color.rgb(0x1C, 0x1B, 0x1F)
     private val muted = Color.rgb(0x5F, 0x5E, 0x66)
-    private val rule = Color.rgb(0xC9, 0xC7, 0xCF)
 
     /** The crest is the launcher foreground, whose artwork sits in the middle ~66% (adaptive-icon safe zone). */
     fun loadLogo(context: Context): Bitmap? =
@@ -38,60 +43,97 @@ object CoverRenderer {
         canvas.drawColor(Color.WHITE)
         if (!template.hasCover) return
 
-        val frame = stroke(ink, 1.5f)
-        canvas.drawRect(MARGIN, MARGIN, PAGE_WIDTH - MARGIN, PAGE_HEIGHT - MARGIN, frame)
+        canvas.drawRect(FRAME, FRAME, PAGE_WIDTH - FRAME, PAGE_HEIGHT - FRAME, stroke(ink, 2f))
+        canvas.drawRect(FRAME_INNER, FRAME_INNER, PAGE_WIDTH - FRAME_INNER, PAGE_HEIGHT - FRAME_INNER, stroke(ink, 1f))
 
         val cx = PAGE_WIDTH / 2f
+        drawCentered(canvas, UNIVERSITY, 84f, fit(UNIVERSITY, PAGE_WIDTH - 2 * MARGIN, 16f))
         if (logo != null) {
-            val half = 60f
-            canvas.drawBitmap(logo, null, RectF(cx - half, 120f - half, cx + half, 120f + half), Paint(Paint.FILTER_BITMAP_FLAG))
+            val half = 54f
+            canvas.drawBitmap(logo, null, RectF(cx - half, 174f - half, cx + half, 174f + half), Paint(Paint.FILTER_BITMAP_FLAG))
         } else {
-            canvas.drawCircle(cx, 120f, 38f, stroke(ink, 1.5f))
-            drawCentered(canvas, "BUBT", 126f, text(15f, ink, bold = true))
+            canvas.drawCircle(cx, 174f, 40f, stroke(ink, 1.5f))
+            drawCentered(canvas, "BUBT", 180f, text(16f, ink, bold = true))
         }
-        drawCentered(canvas, UNIVERSITY, 192f, text(15f, ink, bold = true))
+        drawHeadingBadge(canvas, template.heading)
 
-        if (template == CoverTemplate.IndexPage) drawIndex(canvas, details) else drawCover(canvas, template, details)
+        if (template == CoverTemplate.IndexPage) drawIndex(canvas, details) else drawCover(canvas, details)
     }
 
-    private fun drawCover(canvas: Canvas, template: CoverTemplate, details: CoverDetails) {
-        val heading = text(30f, ink, bold = true).apply { letterSpacing = 0.08f }
-        drawCentered(canvas, template.heading, 290f, heading)
-        courseLine(details)?.let { drawCentered(canvas, it, 324f, text(14f, muted)) }
+    /** The document type sits in a rounded box, as on the printed BUBT cover. */
+    private fun drawHeadingBadge(canvas: Canvas, heading: String) {
+        val label = text(20f, ink, bold = true).apply { letterSpacing = 0.06f }
+        val width = label.measureText(heading) + 56f
+        val height = 46f
+        val centerY = 274f
+        val cx = PAGE_WIDTH / 2f
+        canvas.drawRoundRect(
+            RectF(cx - width / 2, centerY - height / 2, cx + width / 2, centerY + height / 2),
+            10f,
+            10f,
+            stroke(ink, 1.5f)
+        )
+        drawCentered(canvas, heading, centerY + 7f, label)
+    }
 
-        var y = 380f
+    private fun drawCover(canvas: Canvas, details: CoverDetails) {
+        val labelPaint = text(13f, ink, bold = true)
+        val valuePaint = text(13f, ink)
+
+        var y = 372f
+        y = formRow(canvas, "Course Code", details.courseCode, 76f, 148f, y, labelPaint, valuePaint)
+        formRow(canvas, "Course Title", details.courseTitle, 76f, 148f, y, labelPaint, valuePaint)
+
         if (details.title.isNotBlank()) {
-            val titlePaint = text(17f, ink, bold = true)
-            wrap(details.title, PAGE_WIDTH - 2 * 80f, titlePaint).take(3).forEach { line ->
-                drawCentered(canvas, line, y, titlePaint)
-                y += 24f
+            val titlePaint = text(18f, ink, bold = true)
+            var titleY = 452f
+            wrap(details.title, PAGE_WIDTH - 144f, titlePaint).take(3).forEach { line ->
+                drawCentered(canvas, line, titleY, titlePaint)
+                titleY += 24f
             }
         }
 
-        val top = 470f
-        val left = 72f
-        val columnWidth = (PAGE_WIDTH - 2 * left - 32f) / 2
-        drawBlock(canvas, "Submitted To", details.submittedTo, left, top, columnWidth)
-        drawBlock(canvas, "Submitted By", details.submittedBy, left + columnWidth + 32f, top, columnWidth)
+        // Two bordered cards, left blank below the filled lines like the printed form.
+        val boxTop = 552f
+        val boxHeight = 172f
+        val boxGap = 18f
+        val boxWidth = (PAGE_WIDTH - 2 * MARGIN - boxGap) / 2
+        drawPeopleBox(
+            canvas = canvas,
+            heading = "Submitted By:",
+            people = details.submittedBy,
+            left = MARGIN,
+            top = boxTop,
+            width = boxWidth,
+            height = boxHeight,
+            dept = false
+        )
+        drawPeopleBox(
+            canvas = canvas,
+            heading = "Submitted To:",
+            people = details.submittedTo,
+            left = MARGIN + boxWidth + boxGap,
+            top = boxTop,
+            width = boxWidth,
+            height = boxHeight,
+            dept = true
+        )
 
-        canvas.drawLine(left, 740f, PAGE_WIDTH - left, 740f, stroke(rule, 1f))
-        drawCentered(canvas, "Date of submission: ${longDate(details.date)}", 770f, text(13f, ink))
+        drawCentered(canvas, "Date of Submission : ${longDate(details.date)}", 784f, text(13f, ink))
     }
 
     /** Index page: who it belongs to, then an empty table to fill in by hand. */
     private fun drawIndex(canvas: Canvas, details: CoverDetails) {
-        val heading = text(26f, ink, bold = true).apply { letterSpacing = 0.08f }
-        drawCentered(canvas, "INDEX", 256f, heading)
-        courseLine(details)?.let { drawCentered(canvas, it, 284f, text(13f, muted)) }
+        courseLine(details)?.let { drawCentered(canvas, it, 344f, text(13f, muted)) }
         if (details.submittedBy.isNotBlank()) {
-            drawCentered(canvas, details.submittedBy, 306f, text(12f, muted))
+            drawCentered(canvas, details.submittedBy, 366f, text(12f, muted))
         }
 
-        val left = 56f
-        val right = PAGE_WIDTH - 56f
-        val top = 330f
-        val rowHeight = 28f
-        val rows = 15
+        val left = MARGIN
+        val right = PAGE_WIDTH - MARGIN
+        val top = 396f
+        val rowHeight = 24f
+        val rows = 14
         val columns = listOf("No." to 0.08f, "Date" to 0.16f, "Name of the experiment" to 0.46f, "Page" to 0.1f, "Sign" to 0.2f)
         val line = stroke(ink, 1f)
         val bottom = top + rowHeight * (rows + 1)
@@ -102,33 +144,96 @@ object CoverRenderer {
         var x = left
         columns.forEachIndexed { index, (label, fraction) ->
             val width = (right - left) * fraction
-            canvas.drawText(label, x + 6f, top + 18f, headerPaint)
+            canvas.drawText(label, x + 6f, top + 17f, headerPaint)
             if (index < columns.lastIndex) canvas.drawLine(x + width, top, x + width, bottom, line)
             x += width
         }
     }
 
-    private fun drawBlock(canvas: Canvas, label: String, value: String, left: Float, top: Float, width: Float) {
-        canvas.drawText(label.uppercase(Locale.US), left, top, text(10f, muted, bold = true).apply { letterSpacing = 0.1f })
-        canvas.drawLine(left, top + 8f, left + width, top + 8f, stroke(rule, 1f))
-        val valuePaint = text(13f, ink)
-        var y = top + 30f
-        // "Rafi Ahmed · 22235103045" reads better as one item per line.
-        value.split(" · ", ",", "\n")
-            .map { it.trim() }
-            .filter { it.isNotEmpty() }
-            .flatMap { wrap(it, width, valuePaint) }
-            .take(5)
-            .forEach { line ->
-                canvas.drawText(line, left, y, valuePaint)
-                y += 20f
+    /**
+     * "Course Code : CSE 231" — label, colon in a fixed column, then the value.
+     * Returns the baseline for the next row so a wrapped value pushes it down.
+     */
+    private fun formRow(
+        canvas: Canvas,
+        label: String,
+        value: String,
+        left: Float,
+        colonOffset: Float,
+        baseline: Float,
+        labelPaint: Paint,
+        valuePaint: Paint
+    ): Float {
+        canvas.drawText(label, left, baseline, labelPaint)
+        canvas.drawText(":", left + colonOffset, baseline, labelPaint)
+        val valueX = left + colonOffset + 16f
+        val lines = if (value.isBlank()) emptyList() else wrap(value, PAGE_WIDTH - MARGIN - valueX, valuePaint).take(2)
+        lines.forEachIndexed { index, line ->
+            canvas.drawText(line, valueX, baseline + index * 17f, valuePaint)
+        }
+        return baseline + maxOf(24f, lines.size * 17f + 7f)
+    }
+
+    /** The bordered Submitted By / Submitted To card; the teacher card signs off with the department. */
+    private fun drawPeopleBox(
+        canvas: Canvas,
+        heading: String,
+        people: String,
+        left: Float,
+        top: Float,
+        width: Float,
+        height: Float,
+        dept: Boolean
+    ) {
+        canvas.drawRoundRect(RectF(left, top, left + width, top + height), 14f, 14f, stroke(ink, 1.5f))
+        drawCentered(canvas, heading, top + 28f, text(14f, ink, bold = true))
+
+        // "Name · ID" for the student; the teacher string stays on one Name line.
+        val parts = people.split(" · ", ",", "\n").map(String::trim).filter(String::isNotBlank)
+        val rows = if (dept) {
+            listOf("Name" to people.trim())
+        } else {
+            listOf("Name" to parts.getOrElse(0) { "" }, "ID No" to parts.getOrElse(1) { "" })
+        }
+
+        val labelPaint = text(12f, ink, bold = true)
+        val valuePaint = text(12f, ink)
+        val x = left + 16f
+        val valueX = left + 74f
+        val maxWidth = width - 88f
+
+        var y = top + 64f
+        rows.forEach { (label, value) ->
+            canvas.drawText("$label :", x, y, labelPaint)
+            val lines = if (value.isBlank()) emptyList() else wrap(value, maxWidth, valuePaint).take(3)
+            lines.forEachIndexed { index, line -> canvas.drawText(line, valueX, y + index * 16f, valuePaint) }
+            y += maxOf(24f, lines.size * 16f + 8f)
+        }
+
+        if (dept) {
+            var deptY = top + height - 46f
+            listOf("Dept. of", "Bangladesh University of Business", "& Technology").forEach { line ->
+                canvas.drawText(line, x, deptY, text(10f, ink, bold = true))
+                deptY += 14f
             }
+        }
     }
 
     private fun courseLine(details: CoverDetails): String? = listOf(details.courseCode, details.courseTitle)
         .filter { it.isNotBlank() }
         .joinToString(" · ")
         .ifBlank { null }
+
+    /** Shrinks until [value] fits [maxWidth]; the university name must stay on a single line. */
+    private fun fit(value: String, maxWidth: Float, size: Float, smallest: Float = size * 0.78f): Paint {
+        var current = size
+        while (current > smallest) {
+            val paint = text(current, ink, bold = true)
+            if (paint.measureText(value) <= maxWidth) return paint
+            current -= 0.5f
+        }
+        return text(smallest, ink, bold = true)
+    }
 
     private fun drawCentered(canvas: Canvas, value: String, baseline: Float, paint: Paint) {
         canvas.drawText(value, (PAGE_WIDTH - paint.measureText(value)) / 2, baseline, paint)
