@@ -72,6 +72,7 @@ import java.util.TimeZone
 @Composable
 fun ScannerRoute(onClose: () -> Unit, viewModel: ScannerViewModel = viewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val liveDetection by viewModel.liveDetection.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var confirmDiscard by rememberSaveable { mutableStateOf(false) }
 
@@ -102,8 +103,11 @@ fun ScannerRoute(onClose: () -> Unit, viewModel: ScannerViewModel = viewModel())
             state = state,
             onClose = requestClose,
             newCaptureFile = viewModel::newCaptureFile,
+            onCameraPageCaptured = viewModel::addCameraPage,
             onPagesAdded = viewModel::addPages,
-            onReview = viewModel::next
+            onReview = viewModel::next,
+            liveDetection = liveDetection,
+            onFrameAnalyzed = viewModel::analyzeFrame
         )
         ScannerStep.Review -> ReviewStep(
             state = state,

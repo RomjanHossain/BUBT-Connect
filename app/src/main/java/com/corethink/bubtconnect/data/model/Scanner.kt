@@ -25,10 +25,14 @@ data class CoverDetails(
     val submittedBy: String = ""
 )
 
-/** One scanned or imported page. [uri] is a file:// capture or a photo-picker content:// uri. */
+/**
+ * One scanned or imported page. [uri] is the straightened, enhanced page image; [sourceUri]
+ * keeps the raw photo (from the camera or gallery) so Review can re-crop from the original.
+ */
 data class ScanPage(
     val id: Long,
     val uri: String,
     val rotation: Int = 0,
-    val grayscale: Boolean = false
+    val grayscale: Boolean = false,
+    val sourceUri: String? = null
 )

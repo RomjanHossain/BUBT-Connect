@@ -10,9 +10,13 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.CameraSelector
+import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
+import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
+import androidx.camera.core.resolutionselector.AspectRatioStrategy
+import androidx.camera.core.resolutionselector.ResolutionSelector
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.BorderStroke
@@ -54,11 +58,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -73,11 +79,15 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.corethink.bubtconnect.data.model.ScanPage
+import com.corethink.bubtconnect.data.scan.lerpQuad
 import com.corethink.bubtconnect.ui.components.BubtSegmentedControl
 import com.corethink.bubtconnect.ui.design.BubtPrimaryButton
 import com.corethink.bubtconnect.ui.design.BubtShapes
 import com.corethink.bubtconnect.ui.design.BubtSpacing
+import org.fairscan.imageprocessing.Point
 import java.io.File
+import java.util.concurrent.Executors
+import kotlin.math.max
 
 private enum class CaptureMode(val label: String) { Camera("Camera"), Gallery("Gallery"), Auto("Auto") }
 
@@ -95,13 +105,17 @@ fun CaptureStep(
     state: ScannerUiState,
     onClose: () -> Unit,
     newCaptureFile: () -> File,
+    onCameraPageCaptured: (File, (Boolean) -> Unit) -> Unit,
     onPagesAdded: (List<Uri>) -> Unit,
-    onReview: () -> Unit
+    onReview: () -> Unit,
+    liveDetection: ScanDetection?,
+    onFrameAnalyzed: (ImageProxy) -> Unit
 ) {
     val context = LocalContext.current
     var mode by rememberSaveable { mutableStateOf(CaptureMode.Camera) }
     var flashOn by rememberSaveable { mutableStateOf(false) }
     var capturing by remember { mutableStateOf(false) }
+    var processing by remember { mutableStateOf(false) }
     var hasPermission by remember { mutableStateOf(context.hasCameraPermission()) }
     var askedOnce by rememberSaveable { mutableStateOf(false) }
 
@@ -131,7 +145,7 @@ fun CaptureStep(
     val cameraReady = mode != CaptureMode.Gallery && hasPermission
 
     fun capture() {
-        if (capturing) return
+        if (capturing || processing) return
         capturing = true
         val file = newCaptureFile()
         imageCapture.takePicture(
@@ -139,8 +153,15 @@ fun CaptureStep(
             ContextCompat.getMainExecutor(context),
             object : ImageCapture.OnImageSavedCallback {
                 override fun onImageSaved(output: ImageCapture.OutputFileResults) {
-                    capturing = false
-                    onPagesAdded(listOf(Uri.fromFile(file)))
+                    // Detect, straighten and enhance before the page joins the stack.
+                    processing = true
+                    onCameraPageCaptured(file) { ok ->
+                        capturing = false
+                        processing = false
+                        if (!ok) {
+                            Toast.makeText(context, "Couldn't process the page. Try again.", Toast.LENGTH_SHORT).show()
+                        }
+                    }
                 }
 
                 override fun onError(exception: ImageCaptureException) {
@@ -211,7 +232,12 @@ fun CaptureStep(
                     }
                 )
                 else -> {
-                    CameraPreview(imageCapture = imageCapture, modifier = Modifier.fillMaxSize())
+                    CameraPreview(
+                        imageCapture = imageCapture,
+                        onFrameAnalyzed = onFrameAnalyzed,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                    DetectionQuadOverlay(detection = liveDetection, modifier = Modifier.fillMaxSize())
                     FrameGuide(modifier = Modifier.fillMaxSize().padding(BubtSpacing.Xl))
                     Surface(
                         shape = BubtShapes.Chip,
@@ -222,7 +248,11 @@ fun CaptureStep(
                             .padding(bottom = BubtSpacing.Xl + BubtSpacing.Lg)
                     ) {
                         Text(
-                            text = if (mode == CaptureMode.Auto) "Edges found · hold steady" else "Fit the page inside the frame",
+                            text = when {
+                                capturing || processing -> "Straightening & enhancing…"
+                                liveDetection != null -> "Edges found · hold steady"
+                                else -> "Fit the page inside the frame"
+                            },
                             style = MaterialTheme.typography.labelMedium,
                             modifier = Modifier.padding(horizontal = BubtSpacing.Md, vertical = BubtSpacing.Xs + 2.dp)
                         )
@@ -249,7 +279,7 @@ fun CaptureStep(
             verticalAlignment = Alignment.CenterVertically
         ) {
             LastShotButton(page = state.pages.lastOrNull(), onClick = pickFromGallery)
-            ShutterButton(enabled = cameraReady && !capturing, onClick = ::capture)
+            ShutterButton(enabled = cameraReady && !capturing && !processing, onClick = ::capture)
             PageStackButton(
                 count = state.pages.size,
                 enabled = state.pages.isNotEmpty() || state.template.hasCover,
@@ -260,13 +290,33 @@ fun CaptureStep(
     }
 }
 
-/** Binds a back-camera preview + [imageCapture] to the current lifecycle. */
+/**
+ * Binds a back-camera preview + [imageCapture] + [ImageAnalysis] to the current lifecycle.
+ * Analysis frames go to [onFrameAnalyzed] (live document detection) on a single-thread executor.
+ */
 @Composable
-private fun CameraPreview(imageCapture: ImageCapture, modifier: Modifier = Modifier) {
+private fun CameraPreview(
+    imageCapture: ImageCapture,
+    onFrameAnalyzed: (ImageProxy) -> Unit,
+    modifier: Modifier = Modifier
+) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val previewView = remember {
         PreviewView(context).apply { scaleType = PreviewView.ScaleType.FILL_CENTER }
+    }
+    val analysisExecutor = remember { Executors.newSingleThreadExecutor() }
+    val imageAnalysis = remember {
+        ImageAnalysis.Builder()
+            .setResolutionSelector(
+                ResolutionSelector.Builder()
+                    .setAspectRatioStrategy(AspectRatioStrategy.RATIO_4_3_FALLBACK_AUTO_STRATEGY)
+                    .build()
+            )
+            .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+            .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)
+            .build()
+            .also { it.setAnalyzer(analysisExecutor, onFrameAnalyzed) }
     }
     var unavailable by remember { mutableStateOf(false) }
 
@@ -280,12 +330,20 @@ private fun CameraPreview(imageCapture: ImageCapture, modifier: Modifier = Modif
                 val cameraProvider = future.get().also { provider = it }
                 val preview = Preview.Builder().build().also { it.setSurfaceProvider(previewView.surfaceProvider) }
                 cameraProvider.unbindAll()
-                cameraProvider.bindToLifecycle(lifecycleOwner, CameraSelector.DEFAULT_BACK_CAMERA, preview, imageCapture)
+                cameraProvider.bindToLifecycle(
+                    lifecycleOwner,
+                    CameraSelector.DEFAULT_BACK_CAMERA,
+                    preview,
+                    imageAnalysis,
+                    imageCapture
+                )
             }.onFailure { unavailable = true }
         }, ContextCompat.getMainExecutor(context))
         onDispose {
             disposed = true
             provider?.unbindAll()
+            imageAnalysis.clearAnalyzer()
+            analysisExecutor.shutdown()
         }
     }
 
@@ -293,6 +351,64 @@ private fun CameraPreview(imageCapture: ImageCapture, modifier: Modifier = Modif
         ViewfinderMessage(icon = Icons.Outlined.NoPhotography, message = "No camera available on this device.")
     } else {
         AndroidView(factory = { previewView }, modifier = modifier)
+    }
+}
+
+/**
+ * Live document outline over the viewfinder. The quad arrives stabilized from the pipeline
+ * and is lerped toward each new target so the outline glides instead of jumping.
+ */
+@Composable
+private fun DetectionQuadOverlay(detection: ScanDetection?, modifier: Modifier = Modifier) {
+    var displayed by remember { mutableStateOf(detection) }
+    LaunchedEffect(detection) {
+        if (detection == null) {
+            displayed = null
+            return@LaunchedEffect
+        }
+        while (true) {
+            displayed = displayed?.let { current ->
+                ScanDetection(
+                    lerpQuad(current.quad, detection.quad, 0.15f),
+                    detection.frameWidth,
+                    detection.frameHeight
+                )
+            } ?: detection
+            withFrameNanos { }
+        }
+    }
+
+    val accent = MaterialTheme.colorScheme.primary
+    Canvas(modifier = modifier) {
+        val current = displayed ?: return@Canvas
+        val quad = current.quad
+        // PreviewView is FILL_CENTER: cover-scale the 4:3 frame and centre the leftovers.
+        val frameW = current.frameWidth.toFloat()
+        val frameH = current.frameHeight.toFloat()
+        val scale = max(size.width / frameW, size.height / frameH)
+        val dx = (size.width - frameW * scale) / 2f
+        val dy = (size.height - frameH * scale) / 2f
+        fun map(p: Point) = Offset(p.x.toFloat() * scale + dx, p.y.toFloat() * scale + dy)
+
+        val outline = Path().apply {
+            val tl = map(quad.topLeft)
+            moveTo(tl.x, tl.y)
+            val tr = map(quad.topRight)
+            lineTo(tr.x, tr.y)
+            val br = map(quad.bottomRight)
+            lineTo(br.x, br.y)
+            val bl = map(quad.bottomLeft)
+            lineTo(bl.x, bl.y)
+            close()
+        }
+        // Soft fill makes the detected page pop out of the dark viewfinder.
+        drawPath(outline, accent.copy(alpha = 0.12f))
+        quad.edges().forEach {
+            drawLine(accent, map(it.from), map(it.to), 3.dp.toPx(), StrokeCap.Round)
+        }
+        listOf(quad.topLeft, quad.topRight, quad.bottomRight, quad.bottomLeft).forEach {
+            drawCircle(accent, radius = 5.dp.toPx(), center = map(it))
+        }
     }
 }
 

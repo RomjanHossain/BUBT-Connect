@@ -2,6 +2,8 @@ package com.corethink.bubtconnect.ui.scanner
 
 import android.app.Application
 import android.net.Uri
+import android.util.Log
+import androidx.camera.core.ImageProxy
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.corethink.bubtconnect.data.model.CommunityPost
@@ -16,8 +18,16 @@ import com.corethink.bubtconnect.data.repository.ProfileRepository
 import com.corethink.bubtconnect.data.repository.SampleAcademicsRepository
 import com.corethink.bubtconnect.data.repository.SampleCommunityRepository
 import com.corethink.bubtconnect.data.repository.SettingsRepository
+import com.corethink.bubtconnect.data.scan.DocumentPipeline
+import com.corethink.bubtconnect.data.scan.ProcessedPage
+import com.corethink.bubtconnect.data.scan.QuadStabilizer
 import com.corethink.bubtconnect.data.scan.ScanPdfWriter
+import org.fairscan.imageprocessing.ImageSize
+import org.fairscan.imageprocessing.Mode
+import org.fairscan.imageprocessing.Quad
+import org.fairscan.imageprocessing.detectDocumentQuad
 import java.io.File
+import java.io.FileOutputStream
 import java.util.Locale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -32,6 +42,9 @@ enum class ScannerStep(val number: Int) { Template(1), Details(2), Capture(3), R
 
 data class ScanResult(val file: File, val pageCount: Int, val sizeBytes: Long)
 
+/** A stabilized document quad from live analysis, in rotated camera-frame coordinates. */
+data class ScanDetection(val quad: Quad, val frameWidth: Double, val frameHeight: Double)
+
 data class ScannerUiState(
     val step: ScannerStep = ScannerStep.Template,
     val template: CoverTemplate = CoverTemplate.Assignment,
@@ -41,6 +54,7 @@ data class ScannerUiState(
     val selectedPageId: Long? = null,
     val fileName: String = "",
     val isMerging: Boolean = false,
+    val isProcessing: Boolean = false,
     val mergeError: String? = null,
     val result: ScanResult? = null,
     val publishToCommunity: Boolean = true,
@@ -76,7 +90,13 @@ class ScannerViewModel(application: Application) : AndroidViewModel(application)
 
     private var fileNameEdited = false
     private var nextPageId = 1L
+    private var sourceCounter = 0L
     private val scanDir = File(application.cacheDir, "scans")
+
+    private val pipeline = DocumentPipeline(application)
+    private var quadStabilizer = QuadStabilizer()
+    private val _liveDetection = MutableStateFlow<ScanDetection?>(null)
+    val liveDetection: StateFlow<ScanDetection?> = _liveDetection.asStateFlow()
 
     // ------------------------------------------------------------- navigation
 
@@ -109,12 +129,18 @@ class ScannerViewModel(application: Application) : AndroidViewModel(application)
     fun addMorePages() = goTo(ScannerStep.Capture)
 
     private fun goTo(step: ScannerStep) {
+        if (step != ScannerStep.Capture) resetLiveDetection()
         _uiState.update { state ->
             val fileName = if (step == ScannerStep.Review && !fileNameEdited) {
                 defaultFileName(state.template, state.details, profile?.name)
             } else state.fileName
             state.copy(step = step, fileName = fileName, mergeError = null)
         }
+    }
+
+    private fun resetLiveDetection() {
+        quadStabilizer = QuadStabilizer()
+        _liveDetection.value = null
     }
 
     // ------------------------------------------------------------- 1o · template
@@ -141,15 +167,102 @@ class ScannerViewModel(application: Application) : AndroidViewModel(application)
 
     // ------------------------------------------------------------- 1q · capture
 
-    /** Destination for the next camera shot; added as a page once CameraX has written it. */
-    fun newCaptureFile(): File = File(scanDir, "pages/${System.currentTimeMillis()}.jpg").apply { parentFile?.mkdirs() }
+    /** Raw camera shot destination; the pipeline straightens it into [processedCaptureFile]. */
+    fun newCaptureFile(): File =
+        File(scanDir, "pages/${System.currentTimeMillis()}_${sourceCounter++}_src.jpg")
+            .apply { parentFile?.mkdirs() }
 
-    fun addPages(uris: List<Uri>) {
-        if (uris.isEmpty()) return
-        _uiState.update { state ->
-            state.copy(pages = state.pages + uris.map { ScanPage(id = nextPageId++, uri = it.toString()) })
+    private fun processedCaptureFile(sourceFile: File): File =
+        File(sourceFile.parentFile, sourceFile.name.removeSuffix("_src.jpg") + ".jpg")
+
+    /** Feeds camera frames to the segmentation model; the stable quad drives the 1q overlay. */
+    fun analyzeFrame(imageProxy: ImageProxy) {
+        val state = _uiState.value
+        if (state.step != ScannerStep.Capture || state.isProcessing) {
+            imageProxy.close()
+            return
+        }
+        viewModelScope.launch {
+            try {
+                val rotationDegrees = imageProxy.imageInfo.rotationDegrees
+                val bitmap = imageProxy.toBitmap()
+                val frameSize = ImageSize(bitmap.width, bitmap.height)
+                val result = pipeline.segmentFrame(bitmap)
+                bitmap.recycle()
+                _liveDetection.value = result?.let { detection ->
+                    val mask = detection.segmentation
+                    val maskSize = mask.maskSize()
+                    val rawQuad = withContext(Dispatchers.Default) {
+                        detectDocumentQuad(mask, frameSize, Mode.LIVE_ANALYSIS)
+                            ?.rotate90(rotationDegrees / 90, maskSize)
+                    }
+                    val stableQuad = quadStabilizer.update(rawQuad) ?: return@let null
+                    val frame =
+                        if (rotationDegrees % 180 == 0) maskSize
+                        else ImageSize(maskSize.height, maskSize.width)
+                    ScanDetection(stableQuad, frame.width, frame.height)
+                }
+            } finally {
+                imageProxy.close()
+            }
         }
     }
+
+    /** Runs the scan pipeline on a CameraX capture and appends the straightened page. */
+    fun addCameraPage(sourceFile: File, onDone: (Boolean) -> Unit = {}) {
+        viewModelScope.launch {
+            val processed = ingest(listOf(sourceFile to processedCaptureFile(sourceFile)), Mode.CAPTURE)
+            onDone(processed.isNotEmpty())
+        }
+    }
+
+    /** Imports gallery photos, running the same detection + warp + enhancement pipeline. */
+    fun addPages(uris: List<Uri>) {
+        if (uris.isEmpty()) return
+        viewModelScope.launch {
+            val sources = uris.mapNotNull { copyToScanFile(it) }.map { it to processedCaptureFile(it) }
+            ingest(sources, Mode.IMPORT)
+        }
+    }
+
+    /** Persists each processed page; returns the pages that made it. */
+    private suspend fun ingest(sources: List<Pair<File, File>>, mode: Mode): List<ProcessedPage> {
+        if (sources.isEmpty()) return emptyList()
+        resetLiveDetection()
+        _uiState.update { it.copy(isProcessing = true) }
+        val processed = sources.mapNotNull { (source, target) ->
+            runCatching { pipeline.process(source, target, mode) }
+                .onFailure { Log.e("Scanner", "Page processing failed", it) }
+                .getOrNull()
+        }
+        if (processed.isNotEmpty()) {
+            _uiState.update { state ->
+                state.copy(
+                    pages = state.pages + processed.map { page ->
+                        ScanPage(
+                            id = nextPageId++,
+                            uri = Uri.fromFile(page.file).toString(),
+                            sourceUri = Uri.fromFile(page.sourceFile).toString()
+                        )
+                    }
+                )
+            }
+        }
+        _uiState.update { it.copy(isProcessing = false) }
+        return processed
+    }
+
+    /** Copies a photo-picker content:// uri into the scan cache so the pipeline can decode it. */
+    private fun copyToScanFile(uri: Uri): File? = runCatching {
+        val target = File(scanDir, "pages/${System.currentTimeMillis()}_${sourceCounter++}_src.jpg")
+        target.parentFile?.mkdirs()
+        getApplication<Application>().contentResolver.openInputStream(uri)?.use { input ->
+            FileOutputStream(target).use { input.copyTo(it) }
+        } ?: error("Couldn't open $uri")
+        target
+    }.onFailure {
+        Log.e("Scanner", "Import copy failed", it)
+    }.getOrNull()
 
     // ------------------------------------------------------------- 1r · review
 
