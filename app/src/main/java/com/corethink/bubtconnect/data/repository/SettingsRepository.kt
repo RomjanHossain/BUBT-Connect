@@ -1,6 +1,7 @@
 package com.corethink.bubtconnect.data.repository
 
 import com.corethink.bubtconnect.data.model.AppSettings
+import com.corethink.bubtconnect.data.model.CoverTemplate
 import com.corethink.bubtconnect.data.model.ThemeMode
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,6 +20,8 @@ class SettingsRepository {
     fun setExamReminders(enabled: Boolean) = _settings.update { it.copy(examReminders = enabled) }
 
     fun setPaymentDeadlines(enabled: Boolean) = _settings.update { it.copy(paymentDeadlines = enabled) }
+
+    fun setDefaultCoverTemplate(template: CoverTemplate) = _settings.update { it.copy(defaultCoverTemplate = template) }
 
     companion object {
         val Default = SettingsRepository()

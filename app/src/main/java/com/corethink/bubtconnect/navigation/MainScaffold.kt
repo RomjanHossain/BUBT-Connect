@@ -80,6 +80,7 @@ fun MainScaffold(
     onEditProfile: () -> Unit,
     onLoggedOut: () -> Unit,
     onOpenFees: () -> Unit,
+    onOpenDefaultCover: () -> Unit,
     onOpenScanner: () -> Unit,
     tabNavController: NavHostController = rememberNavController()
 ) {
@@ -151,7 +152,12 @@ fun MainScaffold(
             }
             composable(MainTab.Community.route) { CommunityRoute() }
             composable(MainTab.Profile.route) {
-                ProfileRoute(onEditProfile = onEditProfile, onLoggedOut = onLoggedOut, onOpenFees = onOpenFees)
+                ProfileRoute(
+                    onEditProfile = onEditProfile,
+                    onLoggedOut = onLoggedOut,
+                    onOpenFees = onOpenFees,
+                    onOpenDefaultCover = onOpenDefaultCover
+                )
             }
         }
     }

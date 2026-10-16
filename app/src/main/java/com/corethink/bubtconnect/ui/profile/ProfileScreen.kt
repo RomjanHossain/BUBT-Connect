@@ -22,6 +22,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.outlined.Alarm
+import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.EditNote
 import androidx.compose.material.icons.outlined.Payments
@@ -74,6 +75,7 @@ fun ProfileRoute(
     onEditProfile: () -> Unit,
     onLoggedOut: () -> Unit,
     onOpenFees: () -> Unit,
+    onOpenDefaultCover: () -> Unit,
     viewModel: ProfileViewModel = viewModel(),
     annexViewModel: AnnexLoginViewModel = viewModel()
 ) {
@@ -84,6 +86,7 @@ fun ProfileRoute(
         annexState = annexState,
         onEditProfile = onEditProfile,
         onOpenFees = onOpenFees,
+        onOpenDefaultCover = onOpenDefaultCover,
         onSync = viewModel::sync,
         onAnnexIdChange = annexViewModel::onStudentIdChange,
         onPasswordChange = annexViewModel::onPasswordChange,
@@ -115,7 +118,8 @@ fun ProfileScreen(
     onThemeModeChange: (ThemeMode) -> Unit,
     onLogout: () -> Unit,
     modifier: Modifier = Modifier,
-    onOpenFees: () -> Unit = {}
+    onOpenFees: () -> Unit = {},
+    onOpenDefaultCover: () -> Unit = {}
 ) {
     var confirmLogout by rememberSaveable { mutableStateOf(false) }
 
@@ -162,6 +166,10 @@ fun ProfileScreen(
             ConnectAnnexHeroCard(onConnect = onConnect)
         }
         FeesEntry(onClick = onOpenFees)
+        DefaultCoverEntry(
+            current = state.settings.defaultCoverTemplate.label,
+            onClick = onOpenDefaultCover
+        )
 
         SectionLabel("NOTIFICATIONS")
         NotificationSettingsCard(
@@ -357,6 +365,50 @@ private fun FeesEntry(onClick: () -> Unit) {
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.weight(1f)
             )
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+/** Profile row for the scanner's starting cover; the trailing label shows the current pick. */
+@Composable
+private fun DefaultCoverEntry(current: String, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+        shadowElevation = 1.dp
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Description,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(22.dp)
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Text(
+                text = "Default cover page",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.weight(1f)
+            )
+            Text(
+                text = current,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.width(6.dp))
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = null,

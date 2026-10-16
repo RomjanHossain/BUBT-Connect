@@ -10,6 +10,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.corethink.bubtconnect.ui.auth.AnnexLoginRoute
+import com.corethink.bubtconnect.ui.cover.DefaultCoverRoute
 import com.corethink.bubtconnect.ui.design.BubtSpacing
 import com.corethink.bubtconnect.ui.fees.FeesRoute
 import com.corethink.bubtconnect.ui.onboarding.OnboardingTopBar
@@ -27,6 +28,7 @@ object Routes {
     const val NOTIFICATIONS = "notifications"
     const val EDIT_PROFILE = "edit_profile"   // 1c in edit mode, from Profile (1s)
     const val FEES = "fees"                   // 1v
+    const val DEFAULT_COVER = "default_cover" // Profile → default cover page
     const val SCANNER = "scanner"             // 1m–1q, full-screen wizard
 }
 
@@ -65,6 +67,7 @@ fun AppNavGraph(navController: NavHostController = rememberNavController()) {
                 onConnectAnnex = { navController.navigate(Routes.ANNEX_LOGIN) },
                 onEditProfile = { navController.navigate(Routes.EDIT_PROFILE) },
                 onOpenFees = { navController.navigate(Routes.FEES) },
+                onOpenDefaultCover = { navController.navigate(Routes.DEFAULT_COVER) },
                 onOpenScanner = { navController.navigate(Routes.SCANNER) },
                 onLoggedOut = {
                     navController.navigate(Routes.WELCOME) {
@@ -75,6 +78,9 @@ fun AppNavGraph(navController: NavHostController = rememberNavController()) {
         }
         composable(Routes.FEES) {
             FeesRoute(onBack = { navController.popBackStack() })
+        }
+        composable(Routes.DEFAULT_COVER) {
+            DefaultCoverRoute(onBack = { navController.popBackStack() })
         }
         composable(Routes.SCANNER) {
             ScannerRoute(onClose = { navController.popBackStack() })

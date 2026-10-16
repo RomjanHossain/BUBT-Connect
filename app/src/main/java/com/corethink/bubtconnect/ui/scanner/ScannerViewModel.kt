@@ -15,6 +15,7 @@ import com.corethink.bubtconnect.data.repository.CommunityRepository
 import com.corethink.bubtconnect.data.repository.ProfileRepository
 import com.corethink.bubtconnect.data.repository.SampleAcademicsRepository
 import com.corethink.bubtconnect.data.repository.SampleCommunityRepository
+import com.corethink.bubtconnect.data.repository.SettingsRepository
 import com.corethink.bubtconnect.data.scan.ScanPdfWriter
 import java.io.File
 import java.util.Locale
@@ -63,7 +64,12 @@ class ScannerViewModel(application: Application) : AndroidViewModel(application)
 
     private val _uiState = MutableStateFlow(
         submittedByFromProfile(profile).let { auto ->
-            ScannerUiState(details = CoverDetails(submittedBy = auto), submittedByIsAuto = auto.isNotEmpty())
+            ScannerUiState(
+                // The Profile default (Default cover page) pre-selects the 1o tile.
+                template = SettingsRepository.Default.settings.value.defaultCoverTemplate,
+                details = CoverDetails(submittedBy = auto),
+                submittedByIsAuto = auto.isNotEmpty()
+            )
         }
     )
     val uiState: StateFlow<ScannerUiState> = _uiState.asStateFlow()
