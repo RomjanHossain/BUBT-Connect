@@ -506,13 +506,13 @@ private fun QuickActionRowTile(
         color = MaterialTheme.colorScheme.surfaceContainer
     ) {
         Row(
-            modifier = Modifier.padding(12.dp),
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Box(
                 modifier = Modifier
-                    .size(40.dp)
+                    .size(38.dp)
                     .clip(RoundedCornerShape(12.dp))
                     .background(action.containerColor),
                 contentAlignment = Alignment.Center
@@ -521,13 +521,15 @@ private fun QuickActionRowTile(
                     imageVector = action.icon,
                     contentDescription = null,
                     tint = action.contentColor,
-                    modifier = Modifier.size(22.dp)
+                    modifier = Modifier.size(20.dp)
                 )
             }
             Text(
                 text = action.label,
                 style = MaterialTheme.typography.bodyMedium,
+                fontSize = 13.sp,
                 fontWeight = FontWeight.SemiBold,
+                letterSpacing = (-0.2).sp,
                 color = MaterialTheme.colorScheme.onSurface,
                 // `1g` lets the label wrap ("Academic Calendar" runs onto two lines)
                 // instead of ellipsizing it.
@@ -540,7 +542,7 @@ private fun QuickActionRowTile(
                     imageVector = Icons.Outlined.Lock,
                     contentDescription = "Requires Annex",
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(16.dp)
+                    modifier = Modifier.size(14.dp)
                 )
             }
         }

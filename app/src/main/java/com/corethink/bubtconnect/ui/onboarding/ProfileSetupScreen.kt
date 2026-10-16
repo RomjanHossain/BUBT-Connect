@@ -11,10 +11,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -30,6 +30,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
@@ -52,6 +54,7 @@ fun ProfileSetupRoute(
     viewModel: ProfileSetupViewModel = viewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val haptic = LocalHapticFeedback.current
     ProfileSetupScreen(
         state = state,
         onBack = onBack,
@@ -59,7 +62,13 @@ fun ProfileSetupRoute(
         onDepartmentChange = viewModel::onDepartmentChange,
         onSemesterChange = viewModel::onSemesterChange,
         onNameChange = viewModel::onNameChange,
-        onContinue = { if (viewModel.save()) onContinue() },
+        onContinue = {
+            if (viewModel.save()) {
+                onContinue()
+            } else {
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            }
+        },
         isEditing = isEditing
     )
 }
@@ -85,14 +94,19 @@ fun ProfileSetupScreen(
                 .imePadding()
                 .padding(horizontal = 24.dp)
         ) {
-            // App Bar: Back arrow on left, Step 1 of 2 on right
+            // App Bar: Back arrow on left (-12dp offset), Step 1 of 2 on right
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = onBack, modifier = Modifier.size(40.dp)) {
+                IconButton(
+                    onClick = onBack,
+                    modifier = Modifier
+                        .offset(x = (-12).dp)
+                        .size(40.dp)
+                ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back",
@@ -202,7 +216,29 @@ fun ProfileSetupScreen(
 private fun ProfileSetupScreenPreview() {
     BUBTConnectMaterial3Theme {
         ProfileSetupScreen(
-            state = ProfileSetupUiState(roll = "22235103045", department = "CSE"),
+            state = ProfileSetupUiState(roll = "22235103045", department = "CSE", semester = "5th"),
+            onBack = {},
+            onRollChange = {},
+            onDepartmentChange = {},
+            onSemesterChange = {},
+            onNameChange = {},
+            onContinue = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "1d Error State")
+@Composable
+private fun ProfileSetupScreenErrorPreview() {
+    BUBTConnectMaterial3Theme {
+        ProfileSetupScreen(
+            state = ProfileSetupUiState(
+                roll = "22235103045",
+                department = "Computer Science & Eng.",
+                semester = "",
+                name = "Rafi Ahmed",
+                showErrors = true
+            ),
             onBack = {},
             onRollChange = {},
             onDepartmentChange = {},

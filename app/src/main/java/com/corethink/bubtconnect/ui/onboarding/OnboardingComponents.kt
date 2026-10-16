@@ -1,6 +1,5 @@
 package com.corethink.bubtconnect.ui.onboarding
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -15,8 +14,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import com.corethink.bubtconnect.ui.design.BubtError
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -122,7 +123,17 @@ fun BubtDropdownField(
             placeholder = placeholder,
             error = error,
             readOnly = true,
-            trailingIcon = { Icon(Icons.Filled.ArrowDropDown, contentDescription = null) }
+            trailingIcon = {
+                if (error != null) {
+                    Icon(
+                        imageVector = Icons.Filled.Error,
+                        contentDescription = null,
+                        tint = BubtError
+                    )
+                } else {
+                    Icon(Icons.Filled.ArrowDropDown, contentDescription = null)
+                }
+            }
         )
         // OutlinedTextField swallows taps, so an overlay opens the menu instead.
         Box(

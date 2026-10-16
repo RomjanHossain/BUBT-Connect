@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -36,6 +37,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
@@ -46,7 +48,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.corethink.bubtconnect.ui.design.BUBTConnectMaterial3Theme
 import com.corethink.bubtconnect.ui.design.BubtFieldState
 import com.corethink.bubtconnect.ui.design.BubtPrimaryButton
-import com.corethink.bubtconnect.ui.design.BubtSpacing
 import com.corethink.bubtconnect.ui.design.BubtSuccess
 import com.corethink.bubtconnect.ui.design.BubtTextField
 import com.corethink.bubtconnect.ui.onboarding.BubtPasswordField
@@ -71,7 +72,7 @@ fun AnnexLoginRoute(
     )
 }
 
-/** 1f · Annex login. Matches HTML 1f exactly. */
+/** 1f · Annex login · loading state & error state. Matches HTML 1f exactly. */
 @Composable
 fun AnnexLoginScreen(
     state: AnnexLoginUiState,
@@ -91,14 +92,19 @@ fun AnnexLoginScreen(
                 .padding(horizontal = 24.dp)
                 .verticalScroll(rememberScrollState())
         ) {
-            // App bar: Back arrow on left
+            // App bar: Back arrow on left (-12dp offset to align with margin)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = onBack, modifier = Modifier.size(40.dp)) {
+                IconButton(
+                    onClick = onBack,
+                    modifier = Modifier
+                        .offset(x = (-12).dp)
+                        .size(40.dp)
+                ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back",
@@ -109,7 +115,7 @@ fun AnnexLoginScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Header Column: Shield icon box on top + Headline + Subtitle
+            // Header Column: Shield Person icon box (52x52dp, 16dp radius) + Headline + Subtitle
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Surface(
                     shape = RoundedCornerShape(16.dp),
@@ -120,7 +126,7 @@ fun AnnexLoginScreen(
                         Icon(
                             imageVector = Icons.Outlined.Shield,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(28.dp)
                         )
                     }
@@ -130,12 +136,16 @@ fun AnnexLoginScreen(
                     text = "Sign in to Annex",
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 28.sp,
+                    fontSize = 24.sp,
+                    lineHeight = 30.sp,
+                    letterSpacing = (-0.36).sp,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
                     text = "Same ID and password you use on the Annex portal.",
                     style = MaterialTheme.typography.bodyLarge,
+                    fontSize = 15.sp,
+                    lineHeight = 22.5.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -172,12 +182,13 @@ fun AnnexLoginScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 8.dp),
+                    .padding(vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     text = "Keep me signed in",
                     style = MaterialTheme.typography.bodyLarge,
+                    fontSize = 15.sp,
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.weight(1f)
                 )
@@ -189,19 +200,19 @@ fun AnnexLoginScreen(
             BubtPrimaryButton(
                 text = if (state.isLoading) "Signing in…" else "Sign in",
                 onClick = onLogin,
-                enabled = state.canSubmit,
+                enabled = state.canSubmit && !state.isLoading,
                 loading = state.isLoading,
                 modifier = Modifier.fillMaxWidth()
             )
 
             Spacer(modifier = Modifier.height(22.dp))
 
-            // Feature Checklist Card
+            // Outlined Checklist Card (.outl c)
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
-                color = MaterialTheme.colorScheme.surface,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+                color = Color.Transparent,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
             ) {
                 Column(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
@@ -215,7 +226,7 @@ fun AnnexLoginScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Footer Note
+            // Footer Lock Note
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.Center,
@@ -231,6 +242,7 @@ fun AnnexLoginScreen(
                 Text(
                     text = "Encrypted and stored only on this device",
                     style = MaterialTheme.typography.bodySmall,
+                    fontSize = 13.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -265,23 +277,46 @@ fun AuthErrorBanner(message: String, modifier: Modifier = Modifier) {
 
 @Composable
 private fun UnlockItem(text: String) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
         Icon(
             imageVector = Icons.Filled.CheckCircle,
             contentDescription = null,
             tint = BubtSuccess,
             modifier = Modifier.size(20.dp)
         )
-        Spacer(modifier = Modifier.width(12.dp))
         Text(
             text = text,
             style = MaterialTheme.typography.bodyMedium,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Medium,
             color = MaterialTheme.colorScheme.onSurface
         )
     }
 }
 
-@Preview(showBackground = true)
+@Preview(showBackground = true, name = "1f Loading State")
+@Composable
+private fun AnnexLoginScreenLoadingPreview() {
+    BUBTConnectMaterial3Theme {
+        AnnexLoginScreen(
+            state = AnnexLoginUiState(
+                studentId = "22235103045",
+                password = "••••••••••",
+                isLoading = true
+            ),
+            onBack = {},
+            onStudentIdChange = {},
+            onPasswordChange = {},
+            onKeepSignedInChange = {},
+            onLogin = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "1f Error State")
 @Composable
 private fun AnnexLoginScreenErrorPreview() {
     BUBTConnectMaterial3Theme {

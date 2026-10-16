@@ -50,7 +50,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -65,16 +64,10 @@ import com.corethink.bubtconnect.ui.auth.AnnexLoginViewModel
 import com.corethink.bubtconnect.ui.components.BubtSegmentedControl
 import com.corethink.bubtconnect.ui.components.rememberSyncedLabel
 import com.corethink.bubtconnect.ui.design.BUBTConnectMaterial3Theme
-import com.corethink.bubtconnect.ui.design.BubtCard
-import com.corethink.bubtconnect.ui.design.BubtCardStyle
 import com.corethink.bubtconnect.ui.design.BubtOnSuccessContainerLight
 import com.corethink.bubtconnect.ui.design.BubtOutlinedButton
-import com.corethink.bubtconnect.ui.design.BubtShapes
-import com.corethink.bubtconnect.ui.design.BubtSpacing
 import com.corethink.bubtconnect.ui.design.BubtSuccess
 import com.corethink.bubtconnect.ui.design.BubtSuccessContainerLight
-import com.corethink.bubtconnect.ui.design.BubtTag
-import com.corethink.bubtconnect.ui.design.BubtTagStyle
 
 @Composable
 fun ProfileRoute(
@@ -437,7 +430,7 @@ private fun SettingRow(
 @Composable
 private fun ClassReminderDropdown(minutes: Int, onSelect: (Int) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
-    val label = ClassReminderOptions.firstOrNull { it.first == minutes }?.second ?: "$minutes min before"
+    val label = if (minutes == 0) "Off" else "$minutes min before"
 
     Box {
         Row(
@@ -457,7 +450,8 @@ private fun ClassReminderDropdown(minutes: Int, onSelect: (Int) -> Unit) {
             )
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            ClassReminderOptions.forEach { (value, text) ->
+            ClassReminderOptions.forEach { value ->
+                val text = if (value == 0) "Off" else "$value min before"
                 DropdownMenuItem(
                     text = { Text(text) },
                     onClick = {
@@ -527,7 +521,7 @@ private fun ProfileScreenPreview() {
     BUBTConnectMaterial3Theme {
         ProfileScreen(
             state = ProfileUiState(
-                profile = StudentProfile(roll = "22235103045", department = "CSE"),
+                profile = StudentProfile(roll = "22235103045", department = "CSE", semester = "6th"),
                 isConnected = true
             ),
             annexState = AnnexLoginUiState(),

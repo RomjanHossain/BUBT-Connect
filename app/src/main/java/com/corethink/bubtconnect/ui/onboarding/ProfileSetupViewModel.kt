@@ -17,10 +17,15 @@ data class ProfileSetupUiState(
     val showErrors: Boolean = false
 ) {
     val canContinue: Boolean
-        get() = roll.isNotBlank() && department.isNotBlank() && semester.isNotBlank()
+        get() = roll.length == ROLL_LENGTH && department.isNotBlank() && semester.isNotBlank()
 
     val rollError: String?
-        get() = if (showErrors && roll.length != ROLL_LENGTH) "Must be $ROLL_LENGTH digits" else null
+        get() = when {
+            !showErrors -> null
+            roll.isBlank() -> "Please enter your roll number"
+            roll.length != ROLL_LENGTH -> "Must be $ROLL_LENGTH digits"
+            else -> null
+        }
 
     val departmentError: String?
         get() = if (showErrors && department.isBlank()) "Please select your department" else null

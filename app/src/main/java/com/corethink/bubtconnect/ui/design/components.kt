@@ -30,8 +30,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.PriorityHigh
 import androidx.compose.material.icons.filled.WarningAmber
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -326,7 +328,15 @@ fun BubtTextField(
         shape = BubtShapes.Field,
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
         visualTransformation = visualTransformation,
-        trailingIcon = trailingIcon,
+        trailingIcon = trailingIcon ?: if (effectiveState == BubtFieldState.Error) {
+            {
+                Icon(
+                    imageVector = Icons.Filled.Error,
+                    contentDescription = null,
+                    tint = BubtError
+                )
+            }
+        } else null,
         interactionSource = interactionSource,
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = MaterialTheme.colorScheme.primary,
@@ -348,7 +358,20 @@ fun BubtTextField(
         ),
         supportingText = when {
             effectiveState == BubtFieldState.Error && error != null -> {
-                { Text(error, style = MaterialTheme.typography.bodySmall, color = bubtErrorText()) }
+                {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Info,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                            tint = bubtErrorText()
+                        )
+                        Text(error, style = MaterialTheme.typography.bodySmall, color = bubtErrorText())
+                    }
+                }
             }
             supportingText != null -> {
                 { Text(supportingText, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
