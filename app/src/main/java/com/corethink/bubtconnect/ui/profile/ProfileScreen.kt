@@ -163,11 +163,12 @@ fun ProfileScreen(
             onSync = onSync
         )
 
-        if (state.isConnected) {
-            FeesEntry(onClick = onOpenFees)
-        } else {
+        // 1v is opened from Profile whether or not Annex is connected; only the connect
+        // hero card is guest-only (1e). Guests keep the entry instead of losing the page.
+        if (!state.isConnected) {
             ConnectAnnexHeroCard(onConnect = onConnect)
         }
+        FeesEntry(onClick = onOpenFees)
 
         SectionLabel("NOTIFICATIONS")
         NotificationSettingsCard(
