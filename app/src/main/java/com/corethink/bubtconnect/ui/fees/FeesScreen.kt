@@ -56,7 +56,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.corethink.bubtconnect.data.model.FeeStatement
 import com.corethink.bubtconnect.data.repository.SampleAcademicsRepository
 import com.corethink.bubtconnect.ui.components.FilterPill
-import com.corethink.bubtconnect.ui.components.LockedFeature
 import com.corethink.bubtconnect.ui.components.formatTaka
 import com.corethink.bubtconnect.ui.components.rememberSyncedLabel
 import com.corethink.bubtconnect.ui.components.showNotAvailableYet
@@ -71,7 +70,6 @@ import com.corethink.bubtconnect.ui.onboarding.OnboardingTopBar
 @Composable
 fun FeesRoute(
     onBack: () -> Unit,
-    onConnectAnnex: () -> Unit,
     viewModel: FeesViewModel = viewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -79,7 +77,6 @@ fun FeesRoute(
     FeesScreen(
         state = state,
         onBack = onBack,
-        onConnectAnnex = onConnectAnnex,
         onSelectSemester = viewModel::selectSemester,
         onInfoVisibleChange = viewModel::setInfoVisible,
         onDownloadStatement = { showNotAvailableYet(context, "Fee statement PDF") },
@@ -93,7 +90,6 @@ fun FeesRoute(
 fun FeesScreen(
     state: FeesUiState,
     onBack: () -> Unit,
-    onConnectAnnex: () -> Unit,
     onSelectSemester: (Int) -> Unit,
     onInfoVisibleChange: (Boolean) -> Unit,
     onDownloadStatement: () -> Unit,
@@ -111,27 +107,19 @@ fun FeesScreen(
                 onBack = onBack,
                 modifier = Modifier.padding(horizontal = 20.dp),
                 trailing = {
-                    if (state.isConnected) {
-                        IconButton(onClick = { onInfoVisibleChange(true) }) {
-                            Icon(
-                                Icons.Outlined.Info,
-                                contentDescription = "What each line means",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                    IconButton(onClick = { onInfoVisibleChange(true) }) {
+                        Icon(
+                            Icons.Outlined.Info,
+                            contentDescription = "What each line means",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
             )
 
-            val statement = state.selected
-            if (!state.isConnected || statement == null) {
-                LockedFeature(
-                    title = "Fees & Waivers",
-                    message = "Connect your Annex account to see your fee demand, waivers and payments.",
-                    onConnect = onConnectAnnex
-                )
-                return@Column
-            }
+            // 1v has no guest-locked variant in the design, and every other tab already
+            // shows its sample data without an Annex session — render the statement as-is.
+            val statement = state.selected ?: return@Column
 
             Column(
                 modifier = Modifier
@@ -428,7 +416,6 @@ private fun FeesScreenPreview() {
                 statements = SampleAcademicsRepository.feeStatements()
             ),
             onBack = {},
-            onConnectAnnex = {},
             onSelectSemester = {},
             onInfoVisibleChange = {},
             onDownloadStatement = {},

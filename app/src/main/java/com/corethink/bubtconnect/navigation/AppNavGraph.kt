@@ -26,7 +26,7 @@ object Routes {
     const val HOME = "home"                   // 1f, inside MainScaffold
     const val NOTIFICATIONS = "notifications"
     const val EDIT_PROFILE = "edit_profile"   // 1c in edit mode, from Profile (1s)
-    const val FEES = "fees"                   // 1t
+    const val FEES = "fees"                   // 1v
     const val SCANNER = "scanner"             // 1m–1q, full-screen wizard
 }
 
@@ -74,10 +74,7 @@ fun AppNavGraph(navController: NavHostController = rememberNavController()) {
             )
         }
         composable(Routes.FEES) {
-            FeesRoute(
-                onBack = { navController.popBackStack() },
-                onConnectAnnex = { navController.navigate(Routes.ANNEX_LOGIN) }
-            )
+            FeesRoute(onBack = { navController.popBackStack() })
         }
         composable(Routes.SCANNER) {
             ScannerRoute(onClose = { navController.popBackStack() })
