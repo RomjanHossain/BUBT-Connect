@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -178,6 +179,8 @@ private fun DockedScanNavBar(
     onScan: () -> Unit
 ) {
     Surface(
+        // Flutter's SafeArea equivalent: keep the bar above the system nav inset.
+        modifier = Modifier.navigationBarsPadding(),
         color = MaterialTheme.colorScheme.surface,
         shadowElevation = 8.dp
     ) {
