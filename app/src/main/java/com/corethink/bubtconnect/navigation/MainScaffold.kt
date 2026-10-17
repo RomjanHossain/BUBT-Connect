@@ -178,11 +178,12 @@ private fun DockedScanNavBar(
     onTabSelected: (MainTab) -> Unit,
     onScan: () -> Unit
 ) {
-    Surface(
-        // Flutter's SafeArea equivalent: keep the bar above the system nav inset.
-        modifier = Modifier.navigationBarsPadding(),
-        color = MaterialTheme.colorScheme.surface,
-        shadowElevation = 8.dp
+    // Bar + safe-area strip cast one shared shadow, so the elevation fades above the
+    // bar and around the sides — nothing paints over the inset strip below it.
+    Column(
+        modifier = Modifier
+            .shadow(8.dp)
+            .background(MaterialTheme.colorScheme.surface)
     ) {
         Row(
             modifier = Modifier
@@ -197,6 +198,8 @@ private fun DockedScanNavBar(
             NavTabItem(MainTab.Community, currentTab, onTabSelected, Modifier.weight(1f))
             NavTabItem(MainTab.Profile, currentTab, onTabSelected, Modifier.weight(1f))
         }
+        // SafeArea: the system navigation inset, filled with the bar's surface color.
+        Spacer(modifier = Modifier.navigationBarsPadding())
     }
 }
 

@@ -1,5 +1,6 @@
 package com.corethink.bubtconnect
 
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -30,6 +31,11 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        // Drop the system's contrast scrim over the gesture-nav strip (API 29+) so the
+        // area below the bottom bar shows the nav bar color, not a gray overlay.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            window.isNavigationBarContrastEnforced = false
+        }
         setContent {
             val settings by SettingsRepository.Default.settings.collectAsStateWithLifecycle()
             val darkTheme = when (settings.themeMode) {
