@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -353,14 +354,16 @@ fun DetailsStep(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(212.dp)
-                    .clipToBounds()
+                    .clipToBounds(),
+                contentAlignment = Alignment.Center
             ) {
+                // 1p: the whole cover fits inside the panel (design: 184px page in a 212px panel).
                 CoverPreview(
                     template = state.template,
                     details = previewDetails,
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .wrapContentHeight(Alignment.Top, unbounded = true)
+                        .height(196.dp)
+                        .aspectRatio(PageAspectRatio)
                 )
 
                 Surface(
