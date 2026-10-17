@@ -21,7 +21,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.outlined.Crop
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.PictureAsPdf
 import androidx.compose.material.icons.outlined.RotateRight
+import androidx.compose.material.icons.outlined.Tonality
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
@@ -92,6 +94,7 @@ fun ReviewStep(
                 onClick = onMerge,
                 enabled = state.canMerge,
                 loading = state.isMerging,
+                leadingIcon = Icons.Outlined.PictureAsPdf,
                 modifier = Modifier.fillMaxWidth()
             )
         }
@@ -115,29 +118,46 @@ fun ReviewStep(
         val editing = state.processingPageId != null
         var cropping by remember { mutableStateOf(false) }
         var previewing by remember { mutableStateOf(false) }
-        Row(horizontalArrangement = Arrangement.spacedBy(BubtSpacing.Lg)) {
-            ToolButton(
-                Icons.Outlined.Visibility,
-                "Preview",
-                enabled = state.pages.isNotEmpty() && !editing,
-                onClick = {
-                    // Preview the selected page, or page 1 when nothing is selected.
-                    (selected ?: state.pages.firstOrNull())?.let { first ->
-                        if (selected == null) onSelectPage(first.id)
-                        previewing = true
+        var showFilter by remember { mutableStateOf(true) }
+        // Design 1r: tools sit in one tonal rounded row, spread evenly.
+        Surface(
+            shape = BubtShapes.Card,
+            color = MaterialTheme.colorScheme.surfaceContainer,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(
+                modifier = Modifier.padding(vertical = BubtSpacing.Md - 2.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                ToolButton(
+                    Icons.Outlined.Visibility,
+                    "Preview",
+                    enabled = state.pages.isNotEmpty() && !editing,
+                    onClick = {
+                        // Preview the selected page, or page 1 when nothing is selected.
+                        (selected ?: state.pages.firstOrNull())?.let { first ->
+                            if (selected == null) onSelectPage(first.id)
+                            previewing = true
+                        }
                     }
-                }
-            )
-            ToolButton(
-                Icons.Outlined.Crop,
-                "Crop",
-                enabled = selected != null && selected.sourceUri != null && !editing,
-                onClick = { cropping = true }
-            )
-            ToolButton(Icons.Outlined.RotateRight, "Rotate", enabled = selected != null && !editing, onClick = onRotate)
-            ToolButton(Icons.Outlined.Delete, "Delete", enabled = selected != null && !editing, onClick = onDelete)
+                )
+                ToolButton(
+                    Icons.Outlined.Crop,
+                    "Crop",
+                    enabled = selected != null && selected.sourceUri != null && !editing,
+                    onClick = { cropping = true }
+                )
+                ToolButton(Icons.Outlined.RotateRight, "Rotate", enabled = selected != null && !editing, onClick = onRotate)
+                ToolButton(
+                    Icons.Outlined.Tonality,
+                    "Filter",
+                    enabled = selected != null && !editing,
+                    onClick = { showFilter = !showFilter }
+                )
+                ToolButton(Icons.Outlined.Delete, "Delete", enabled = selected != null && !editing, onClick = onDelete)
+            }
         }
-        if (selected != null) {
+        if (showFilter && selected != null) {
             Text(
                 text = "Color mode",
                 style = MaterialTheme.typography.labelSmall,
@@ -404,24 +424,16 @@ private fun ToolButton(
     icon: ImageVector,
     label: String,
     enabled: Boolean,
-    onClick: () -> Unit,
-    active: Boolean = false
+    onClick: () -> Unit
 ) {
     val content = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Surface(
-            onClick = onClick,
-            enabled = enabled,
-            shape = BubtShapes.Skeleton,
-            color = if (active) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
-            contentColor = if (active) MaterialTheme.colorScheme.onPrimaryContainer else content,
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-            modifier = Modifier.size(40.dp)
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(icon, contentDescription = label, modifier = Modifier.size(20.dp))
-            }
-        }
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .clickable(enabled = enabled, onClickLabel = label, onClick = onClick)
+            .padding(horizontal = BubtSpacing.Sm)
+    ) {
+        Icon(icon, contentDescription = label, tint = content, modifier = Modifier.size(22.dp))
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,

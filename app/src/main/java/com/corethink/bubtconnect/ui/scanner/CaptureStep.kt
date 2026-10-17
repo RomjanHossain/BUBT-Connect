@@ -13,6 +13,7 @@ import android.provider.Settings
 import android.util.Log
 import android.util.Size
 import android.widget.Toast
+import android.view.HapticFeedbackConstants
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -67,9 +68,16 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -77,8 +85,10 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -97,6 +107,7 @@ import com.corethink.bubtconnect.ui.design.BubtShapes
 import org.fairscan.imageprocessing.CameraIntrinsics
 import org.fairscan.imageprocessing.OpticalMeasures
 import org.fairscan.imageprocessing.cameraIntrinsics
+import kotlinx.coroutines.launch
 import kotlin.math.max
 import com.corethink.bubtconnect.ui.design.BubtSpacing
 import org.fairscan.imageprocessing.Point
@@ -127,6 +138,7 @@ fun CaptureStep(
     onFrameAnalyzed: (ImageProxy) -> Unit
 ) {
     val context = LocalContext.current
+    val view = LocalView.current
     var mode by rememberSaveable { mutableStateOf(CaptureMode.Camera) }
     var flashOn by rememberSaveable { mutableStateOf(false) }
     var capturing by remember { mutableStateOf(false) }
@@ -191,9 +203,28 @@ fun CaptureStep(
     }
     val cameraReady = mode != CaptureMode.Gallery && hasPermission
 
+    val scope = rememberCoroutineScope()
+    val shutterFlash = remember { Animatable(0f) }
+
+    // Design 1q: a medium tap the moment the frame locks onto the page edges.
+    var wasLocked by remember { mutableStateOf(false) }
+    LaunchedEffect(liveDetection != null) {
+        val locked = liveDetection != null
+        if (locked != wasLocked) {
+            wasLocked = locked
+            if (locked) view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+        }
+    }
+
     fun capture() {
         if (capturing || processing) return
         capturing = true
+        // Design 1q: shutter flashes white briefly and taps medium on capture.
+        view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+        scope.launch {
+            shutterFlash.snapTo(0.9f)
+            shutterFlash.animateTo(0f, tween(durationMillis = 180))
+        }
         val file = newCaptureFile()
         imageCapture.takePicture(
             ImageCapture.OutputFileOptions.Builder(file).build(),
@@ -286,24 +317,67 @@ fun CaptureStep(
                         modifier = Modifier.fillMaxSize()
                     )
                     DetectionQuadOverlay(detection = liveDetection, modifier = Modifier.fillMaxSize())
-                    FrameGuide(modifier = Modifier.fillMaxSize().padding(BubtSpacing.Xl))
+                    FrameGuide(
+                        locked = liveDetection != null,
+                        modifier = Modifier.fillMaxSize().padding(BubtSpacing.Xl)
+                    )
+                    // Design 1q: shutter flashes white 120ms on capture.
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.White.copy(alpha = shutterFlash.value))
+                    )
+                    val locked = liveDetection != null
                     Surface(
                         shape = BubtShapes.Chip,
-                        color = Color.Black.copy(alpha = 0.6f),
+                        color = when {
+                            capturing || processing -> Color(0xCC10B981)
+                            locked -> Color(0xE610B981)
+                            else -> Color.Black.copy(alpha = 0.6f)
+                        },
                         contentColor = CaptureContent,
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
                             .padding(bottom = BubtSpacing.Xl + BubtSpacing.Lg)
                     ) {
-                        Text(
-                            text = when {
-                                capturing || processing -> "Straightening & enhancing…"
-                                liveDetection != null -> "Edges found · hold steady"
-                                else -> "Fit the page inside the frame"
-                            },
-                            style = MaterialTheme.typography.labelMedium,
-                            modifier = Modifier.padding(horizontal = BubtSpacing.Md, vertical = BubtSpacing.Xs + 2.dp)
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(
+                                start = BubtSpacing.Md - 2.dp,
+                                end = BubtSpacing.Md - 2.dp,
+                                top = BubtSpacing.Xs + 2.dp,
+                                bottom = BubtSpacing.Xs + 2.dp
+                            )
+                        ) {
+                            if (capturing || processing || locked) {
+                                // White dot pulses while the frame holds (design "Edges found").
+                                val dot = rememberInfiniteTransition(label = "pulse")
+                                val dotAlpha = dot.animateFloat(
+                                    initialValue = 1f,
+                                    targetValue = 0.55f,
+                                    animationSpec = infiniteRepeatable(
+                                        animation = tween(800),
+                                        repeatMode = RepeatMode.Reverse
+                                    ),
+                                    label = "dotAlpha"
+                                )
+                                Box(
+                                    modifier = Modifier
+                                        .padding(end = BubtSpacing.Sm)
+                                        .size(8.dp)
+                                        .graphicsLayer { alpha = if (locked || capturing || processing) dotAlpha.value else 1f }
+                                        .background(CaptureContent, CircleShape)
+                                )
+                            }
+                            Text(
+                                text = when {
+                                    capturing || processing -> "Straightening & enhancing…"
+                                    locked -> "Edges found · hold steady"
+                                    else -> "Fit the page inside the frame"
+                                },
+                                style = MaterialTheme.typography.labelMedium
+                            )
+                        }
                     }
                 }
             }
@@ -509,10 +583,22 @@ private fun DetectionQuadOverlay(detection: ScanDetection?, modifier: Modifier =
     }
 }
 
-/** Corner brackets showing where to place the page. */
+/** Corner brackets; they pulse while searching, then hold solid accent blue when locked (design 1q). */
 @Composable
-private fun FrameGuide(modifier: Modifier = Modifier) {
-    Canvas(modifier = modifier) {
+private fun FrameGuide(locked: Boolean, modifier: Modifier = Modifier) {
+    val accent = MaterialTheme.colorScheme.primary
+    val transition = rememberInfiniteTransition(label = "corners")
+    val pulse by transition.animateFloat(
+        initialValue = 0.4f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(900),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "cornerAlpha"
+    )
+    Canvas(modifier = modifier.graphicsLayer { alpha = if (locked) 1f else pulse }) {
+        val color = if (locked) accent else CaptureContent
         val arm = 28.dp.toPx()
         val stroke = 3.dp.toPx()
         val corners = listOf(
@@ -522,8 +608,8 @@ private fun FrameGuide(modifier: Modifier = Modifier) {
             Offset(size.width, size.height) to Offset(-1f, -1f)
         )
         corners.forEach { (corner, direction) ->
-            drawLine(CaptureContent, corner, corner + Offset(arm * direction.x, 0f), stroke, StrokeCap.Round)
-            drawLine(CaptureContent, corner, corner + Offset(0f, arm * direction.y), stroke, StrokeCap.Round)
+            drawLine(color, corner, corner + Offset(arm * direction.x, 0f), stroke, StrokeCap.Round)
+            drawLine(color, corner, corner + Offset(0f, arm * direction.y), stroke, StrokeCap.Round)
         }
     }
 }

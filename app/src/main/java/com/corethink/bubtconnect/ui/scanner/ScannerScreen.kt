@@ -8,6 +8,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -146,15 +147,17 @@ fun ScannerRoute(onClose: () -> Unit, viewModel: ScannerViewModel = viewModel())
     }
 }
 
-/** Light wizard page: header, scrolling body, pinned primary action. */
+/** Light wizard page: header, scrolling body, pinned primary action. [overlay] draws above everything. */
 @Composable
 internal fun WizardFrame(
     header: @Composable () -> Unit,
     bottom: @Composable () -> Unit,
+    overlay: (@Composable BoxScope.() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-        Column(
+        Box(modifier = Modifier.fillMaxSize()) {
+            Column(
             modifier = Modifier
                 .fillMaxSize()
                 .statusBarsPadding()
@@ -170,6 +173,8 @@ internal fun WizardFrame(
                 content = content
             )
             Box(modifier = Modifier.padding(horizontal = BubtSpacing.Screen, vertical = BubtSpacing.Md)) { bottom() }
+            }
+            overlay?.invoke(this)
         }
     }
 }
