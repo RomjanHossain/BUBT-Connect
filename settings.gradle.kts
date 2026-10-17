@@ -19,6 +19,8 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        // tesseract4android (OCR engine) is published via JitPack, as in FairScan.
+        maven { url = uri("https://jitpack.io") }
     }
 }
 

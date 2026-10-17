@@ -120,6 +120,7 @@ fun ScannerRoute(onClose: () -> Unit, viewModel: ScannerViewModel = viewModel())
             onColorMode = viewModel::setPageColorMode,
             onDelete = viewModel::deleteSelected,
             onFileNameChange = viewModel::onFileNameChange,
+            onSearchableChange = viewModel::onSearchablePdfChange,
             onMerge = viewModel::next
         )
         ScannerStep.Success -> SuccessRoute(

@@ -21,6 +21,7 @@ import com.corethink.bubtconnect.data.repository.SettingsRepository
 import com.corethink.bubtconnect.data.scan.DocumentPipeline
 import com.corethink.bubtconnect.data.scan.ProcessedPage
 import com.corethink.bubtconnect.data.scan.QuadStabilizer
+import com.corethink.bubtconnect.data.scan.ScanOcr
 import com.corethink.bubtconnect.data.scan.ScanPdfWriter
 import org.fairscan.imageprocessing.ColorMode
 import org.fairscan.imageprocessing.ImageSize
@@ -54,6 +55,7 @@ data class ScannerUiState(
     val pages: List<ScanPage> = emptyList(),
     val selectedPageId: Long? = null,
     val fileName: String = "",
+    val searchablePdf: Boolean = true,
     val isMerging: Boolean = false,
     val isProcessing: Boolean = false,
     val processingPageId: Long? = null,
@@ -94,6 +96,7 @@ class ScannerViewModel(application: Application) : AndroidViewModel(application)
     private var nextPageId = 1L
     private var sourceCounter = 0L
     private val scanDir = File(application.cacheDir, "scans")
+    private val ocr = ScanOcr(application)
 
     private val pipeline = DocumentPipeline(application)
     private var quadStabilizer = QuadStabilizer()
@@ -328,6 +331,11 @@ class ScannerViewModel(application: Application) : AndroidViewModel(application)
         _uiState.update { it.copy(fileName = value) }
     }
 
+    /** Toggles the invisible OCR text layer on exported pages. */
+    fun onSearchablePdfChange(value: Boolean) {
+        _uiState.update { it.copy(searchablePdf = value) }
+    }
+
     private fun editSelected(transform: (ScanPage) -> ScanPage) {
         _uiState.update { state ->
             state.copy(pages = state.pages.map { if (it.id == state.selectedPageId) transform(it) else it })
@@ -342,7 +350,14 @@ class ScannerViewModel(application: Application) : AndroidViewModel(application)
             val outcome = withContext(Dispatchers.IO) {
                 runCatching {
                     val target = File(scanDir, sanitizeFileName(state.fileName))
-                    val count = ScanPdfWriter.write(getApplication(), target, state.template, state.details, state.pages)
+                    val count = ScanPdfWriter.write(
+                        getApplication(),
+                        target,
+                        state.template,
+                        state.details,
+                        state.pages,
+                        ocr = if (state.searchablePdf) ocr else null
+                    )
                     ScanResult(target, count, target.length())
                 }
             }
@@ -420,6 +435,11 @@ class ScannerViewModel(application: Application) : AndroidViewModel(application)
                 likes = 0
             )
         )
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        ocr.close()
     }
 
     companion object {

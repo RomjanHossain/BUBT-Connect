@@ -27,6 +27,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -78,6 +79,7 @@ fun ReviewStep(
     onColorMode: (ColorMode?) -> Unit,
     onDelete: () -> Unit,
     onFileNameChange: (String) -> Unit,
+    onSearchableChange: (Boolean) -> Unit,
     onMerge: () -> Unit
 ) {
     val totalPages = state.pages.size + if (state.template.hasCover) 1 else 0
@@ -153,6 +155,24 @@ fun ReviewStep(
             label = "File name",
             supportingText = summary(state)
         )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Searchable text (OCR)",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = "Adds hidden text so you can search and copy from the PDF.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Switch(checked = state.searchablePdf, onCheckedChange = onSearchableChange)
+        }
         state.mergeError?.let {
             Text(text = it, style = MaterialTheme.typography.bodySmall, color = bubtErrorText())
         }
@@ -437,6 +457,7 @@ private fun ReviewStepPreview() {
                 onColorMode = {},
                 onDelete = {},
                 onFileNameChange = {},
+                onSearchableChange = {},
                 onMerge = {}
             )
         }

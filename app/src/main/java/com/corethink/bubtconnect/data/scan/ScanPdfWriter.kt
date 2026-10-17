@@ -77,7 +77,8 @@ object ScanPdfWriter {
         target: File,
         template: CoverTemplate,
         details: CoverDetails,
-        pages: List<ScanPage>
+        pages: List<ScanPage>,
+        ocr: ScanOcr? = null
     ): Int {
         val document = PdfDocument()
         var pageNumber = 0
@@ -88,10 +89,21 @@ object ScanPdfWriter {
                 document.finishPage(page)
             }
             val bitmapPaint = Paint(Paint.FILTER_BITMAP_FLAG)
+            val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = android.graphics.Color.BLACK
+                // 1/255 alpha: invisible to the eye, but still a real text run that
+                // search, selection and screen readers pick up.
+                alpha = 1
+                textAlign = Paint.Align.LEFT
+            }
             pages.forEach { scan ->
                 val bitmap = PageBitmaps.decode(context, scan, MAX_IMAGE_SIDE) ?: return@forEach
                 val page = document.startPage(pageInfo(++pageNumber))
-                page.canvas.drawBitmap(bitmap, null, fitRect(bitmap.width, bitmap.height), bitmapPaint)
+                val dest = fitRect(bitmap.width, bitmap.height)
+                page.canvas.drawBitmap(bitmap, null, dest, bitmapPaint)
+                if (ocr != null && ocr.ensureReady()) {
+                    drawTextLayer(page.canvas, ocr.words(bitmap), dest, bitmap.width, bitmap.height, textPaint)
+                }
                 document.finishPage(page)
                 bitmap.recycle()
             }
@@ -101,6 +113,33 @@ object ScanPdfWriter {
             document.close()
         }
         return pageNumber
+    }
+
+    /**
+     * Paints the recognized words back over the page image with the same transform
+     * the bitmap got, so the extractable text lines up with what's printed.
+     */
+    private fun drawTextLayer(
+        canvas: Canvas,
+        words: List<OcrWord>,
+        dest: RectF,
+        bitmapWidth: Int,
+        bitmapHeight: Int,
+        paint: Paint
+    ) {
+        if (words.isEmpty()) return
+        val scaleX = dest.width() / bitmapWidth
+        val scaleY = dest.height() / bitmapHeight
+        words.forEach { word ->
+            if (word.lineHeight <= 0) return@forEach
+            paint.textSize = word.lineHeight * scaleY * 0.8f
+            canvas.drawText(
+                word.text,
+                dest.left + word.left * scaleX,
+                dest.top + word.baseline * scaleY,
+                paint
+            )
+        }
     }
 
     private fun pageInfo(number: Int) =

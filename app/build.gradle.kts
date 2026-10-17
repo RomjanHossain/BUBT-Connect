@@ -37,6 +37,36 @@ val downloadTFLiteModel = tasks.register<DownloadTFLiteModelTask>("downloadTFLit
     outputDirectory.set(layout.buildDirectory.dir("downloads/tflite"))
 }
 
+// Downloads the English Tesseract model (~1.6 MB, Apache-2.0, tesseract-ocr/tessdata_fast)
+// into assets at build time — the exported PDFs get a searchable text layer offline,
+// without an INTERNET permission or any runtime download.
+abstract class DownloadOcrLanguageTask : DefaultTask() {
+    @get:OutputDirectory
+    abstract val outputDirectory: DirectoryProperty
+
+    @TaskAction
+    fun download() {
+        val modelUrl = "https://raw.githubusercontent.com/tesseract-ocr/tessdata_fast/main/eng.traineddata"
+        val outputFile = outputDirectory.file("tessdata/eng.traineddata").get().asFile
+
+        if (!outputFile.exists()) {
+            println("Downloading eng.traineddata from $modelUrl")
+            outputFile.parentFile.mkdirs()
+            URI(modelUrl).toURL().openStream().use { input ->
+                outputFile.outputStream().use { output ->
+                    input.copyTo(output)
+                }
+            }
+        } else {
+            println("OCR language data already downloaded: ${outputFile.absolutePath}")
+        }
+    }
+}
+
+val downloadOcrLanguage = tasks.register<DownloadOcrLanguageTask>("downloadOcrLanguage") {
+    outputDirectory.set(layout.buildDirectory.dir("downloads/tessdata"))
+}
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -93,6 +123,10 @@ androidComponents {
             downloadTFLiteModel,
             DownloadTFLiteModelTask::outputDirectory,
         )
+        variant.sources.assets?.addGeneratedSourceDirectory(
+            downloadOcrLanguage,
+            DownloadOcrLanguageTask::outputDirectory,
+        )
     }
 }
 
@@ -124,6 +158,7 @@ dependencies {
     implementation(libs.litert)
     implementation(libs.litert.support)
     implementation(libs.litert.metadata)
+    implementation(libs.tesseract4android)
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
