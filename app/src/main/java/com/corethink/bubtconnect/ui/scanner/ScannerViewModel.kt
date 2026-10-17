@@ -235,10 +235,15 @@ class ScannerViewModel(application: Application) : AndroidViewModel(application)
         if (sources.isEmpty()) return emptyList()
         resetLiveDetection()
         _uiState.update { it.copy(isProcessing = true) }
+        // A capture must never be lost to a silent pipeline error: fall back to the
+        // raw photo so Review always shows the page and the user can crop manually.
         val processed = sources.mapNotNull { (source, target) ->
             runCatching { pipeline.process(source, target, mode) }
-                .onFailure { Log.e("Scanner", "Page processing failed", it) }
+                .onFailure { Log.e("Scanner", "Page processing failed; keeping the raw photo", it) }
                 .getOrNull()
+                ?: runCatching { ProcessedPage(source, source, null, ColorMode.COLOR) }
+                    .onFailure { Log.e("Scanner", "Raw capture also unreadable", it) }
+                    .getOrNull()
         }
         if (processed.isNotEmpty()) {
             _uiState.update { state ->

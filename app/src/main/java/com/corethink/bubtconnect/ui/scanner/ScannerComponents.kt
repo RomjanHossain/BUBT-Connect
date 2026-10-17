@@ -21,6 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.outlined.BrokenImage
+import androidx.compose.material.icons.outlined.RotateRight
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -161,6 +162,80 @@ fun CoverPreviewDialog(template: CoverTemplate, details: CoverDetails, onDismiss
                 template = template,
                 details = details,
                 modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(PageAspectRatio)
+            )
+        }
+    }
+}
+
+/** Full-screen page preview on a scrim: the selected page big, with Rotate and ×. */
+@Composable
+fun PagePreviewDialog(
+    page: ScanPage,
+    pageLabel: String,
+    onRotate: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.92f))
+                .clickable(onClick = onDismiss)
+                .padding(BubtSpacing.Screen)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = pageLabel,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = Color.White,
+                    modifier = Modifier.weight(1f)
+                )
+                Surface(
+                    onClick = onRotate,
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.surface,
+                    shadowElevation = 4.dp,
+                    modifier = Modifier
+                        .padding(end = BubtSpacing.Md)
+                        .size(40.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Outlined.RotateRight,
+                            contentDescription = "Rotate page",
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+                Surface(
+                    onClick = onDismiss,
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.surface,
+                    shadowElevation = 4.dp,
+                    modifier = Modifier.size(40.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Filled.Close,
+                            contentDescription = "Close preview",
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+            }
+            PageThumbnail(
+                page = page,
+                maxSize = 2000,
+                modifier = Modifier
+                    .align(Alignment.Center)
                     .fillMaxWidth()
                     .aspectRatio(PageAspectRatio)
             )

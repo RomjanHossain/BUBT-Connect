@@ -100,10 +100,16 @@ class DocumentPipeline(private val context: Context) {
                 ?: error("Couldn't read ${sourceFile.name}")
 
             val frameSize = ImageSize(bitmap.width, bitmap.height)
-            val result = segmentation.runSegmentationAndReturn(bitmap)
+            // Detection failures must never lose the capture: fall back to the whole
+            // photo so Review always shows the page and the user can crop manually.
+            val result = runCatching { segmentation.runSegmentationAndReturn(bitmap) }
+                .onFailure { Log.e(TAG, "Segmentation failed; keeping the full photo", it) }
+                .getOrNull()
             val mask = result?.segmentation
             val quadInMask = mask?.let {
-                detectDocumentQuad(mask, frameSize, mode)
+                runCatching { detectDocumentQuad(mask, frameSize, mode) }
+                    .onFailure { Log.e(TAG, "Quad detection failed; keeping the full photo", it) }
+                    .getOrNull()
             }
 
             val rgba = Mat()
@@ -122,8 +128,15 @@ class DocumentPipeline(private val context: Context) {
             } else {
                 val quad = quadInMask.scaledTo(mask.width, mask.height, bgr.width(), bgr.height())
                 normalizedQuad = quad.scaledTo(bgr.width(), bgr.height(), 1, 1)
-                colorMode = autoColorMode(bgr, mask, quad)
-                extractDocument(bgr, quad, 0, colorMode, MAX_PIXELS)
+                // Warp failure must also degrade gracefully instead of losing the page.
+                colorMode = runCatching { autoColorMode(bgr, mask, quad) }
+                    .onFailure { Log.e(TAG, "Auto color detection failed; using COLOR", it) }
+                    .getOrDefault(ColorMode.COLOR)
+                runCatching { extractDocument(bgr, quad, 0, colorMode, MAX_PIXELS) }
+                    .getOrElse {
+                        Log.e(TAG, "Warp failed; keeping the full photo", it)
+                        resizeForMaxPixels(bgr, MAX_PIXELS.toDouble())
+                    }
             }
             bgr.release()
 

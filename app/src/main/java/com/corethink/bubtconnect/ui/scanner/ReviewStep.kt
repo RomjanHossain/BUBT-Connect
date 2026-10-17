@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.outlined.Crop
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.RotateRight
+import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -113,7 +114,20 @@ fun ReviewStep(
         val selected = state.selectedPage
         val editing = state.processingPageId != null
         var cropping by remember { mutableStateOf(false) }
+        var previewing by remember { mutableStateOf(false) }
         Row(horizontalArrangement = Arrangement.spacedBy(BubtSpacing.Lg)) {
+            ToolButton(
+                Icons.Outlined.Visibility,
+                "Preview",
+                enabled = state.pages.isNotEmpty() && !editing,
+                onClick = {
+                    // Preview the selected page, or page 1 when nothing is selected.
+                    (selected ?: state.pages.firstOrNull())?.let { first ->
+                        if (selected == null) onSelectPage(first.id)
+                        previewing = true
+                    }
+                }
+            )
             ToolButton(
                 Icons.Outlined.Crop,
                 "Crop",
@@ -146,6 +160,17 @@ fun ReviewStep(
                 },
                 onDismiss = { cropping = false }
             )
+        }
+        if (previewing && selected != null) {
+            val pageIndex = state.pages.indexOfFirst { it.id == selected.id }
+            if (pageIndex >= 0) {
+                PagePreviewDialog(
+                    page = selected,
+                    pageLabel = "Page ${pageIndex + 1 + if (state.template.hasCover) 1 else 0} of $totalPages",
+                    onRotate = onRotate,
+                    onDismiss = { previewing = false }
+                )
+            }
         }
         HorizontalDivider(color = MaterialTheme.colorScheme.outline, modifier = Modifier.padding(vertical = BubtSpacing.Md))
 

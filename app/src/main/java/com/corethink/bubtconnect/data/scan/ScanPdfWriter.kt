@@ -12,6 +12,7 @@ import android.graphics.RectF
 import android.graphics.pdf.PdfDocument
 import android.media.ExifInterface
 import android.net.Uri
+import android.util.Log
 import com.corethink.bubtconnect.data.model.CoverDetails
 import com.corethink.bubtconnect.data.model.CoverTemplate
 import com.corethink.bubtconnect.data.model.ScanPage
@@ -22,8 +23,16 @@ import kotlin.math.min
 /** Decodes page images, honouring EXIF orientation plus the user's rotate / filter edits. */
 object PageBitmaps {
 
-    fun decode(context: Context, page: ScanPage, maxSize: Int): Bitmap? = runCatching {
-        val uri = Uri.parse(page.uri)
+    fun decode(context: Context, page: ScanPage, maxSize: Int): Bitmap? {
+        val decoded = decodeUri(context, page.uri, page, maxSize)
+        if (decoded != null) return decoded
+        Log.e("PageBitmaps", "Page decode failed for ${page.uri}; falling back to the stored original")
+        // Never leave a tile blank: the original capture is still on disk.
+        return page.sourceUri?.let { decodeUri(context, it, page, maxSize) }
+    }
+
+    private fun decodeUri(context: Context, uriString: String, page: ScanPage, maxSize: Int): Bitmap? = runCatching {
+        val uri = Uri.parse(uriString)
         val resolver = context.contentResolver
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         resolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) } ?: return null
