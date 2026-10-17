@@ -36,7 +36,10 @@ enum class ColorMode {
 
 fun enhanceCapturedImage(img: Mat, colorMode: ColorMode, maxPixels: Long = 0L): Mat {
     return when (colorMode) {
-        ColorMode.COLOR -> multiScaleRetinexOnL(img)
+        // FairScan normalizes illumination for COLOR pages with multi-scale Retinex,
+        // but users (rightly) expect "Color" to keep the photo's original colors intact.
+        // Deviation from FairScan: COLOR is a faithful pass-through here.
+        ColorMode.COLOR -> img
         ColorMode.GRAYSCALE -> enhanceGrayscaleImage(img)
         ColorMode.BLACK_AND_WHITE -> binarizeDocument(img, maxPixels)
     }
