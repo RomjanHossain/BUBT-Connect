@@ -69,6 +69,7 @@ import com.corethink.bubtconnect.ui.design.BubtOnSuccessContainerLight
 import com.corethink.bubtconnect.ui.design.BubtOutlinedButton
 import com.corethink.bubtconnect.ui.design.BubtSuccess
 import com.corethink.bubtconnect.ui.design.BubtSuccessContainerLight
+import com.corethink.bubtconnect.ui.design.bubtErrorText
 
 @Composable
 fun ProfileRoute(
@@ -187,6 +188,7 @@ fun ProfileScreen(
         BubtOutlinedButton(
             text = "Log out",
             onClick = { confirmLogout = true },
+            contentColor = bubtErrorText(),
             leadingIcon = Icons.AutoMirrored.Outlined.Logout,
             modifier = Modifier.fillMaxWidth()
         )

@@ -226,6 +226,7 @@ fun BubtOutlinedButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     state: BubtButtonState? = null,
+    contentColor: Color = MaterialTheme.colorScheme.primary,
     leadingIcon: ImageVector? = null,
     trailingIcon: ImageVector? = null
 ) {
@@ -237,7 +238,7 @@ fun BubtOutlinedButton(
         loading = false,
         state = state,
         container = Color.Transparent,
-        content = MaterialTheme.colorScheme.primary,
+        content = contentColor,
         disabledContainer = Color.Transparent,
         disabledContent = MaterialTheme.colorScheme.onSurfaceVariant,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
