@@ -67,7 +67,9 @@ object PageBitmaps {
 /** Merges the cover and pages into one A4 PDF. */
 object ScanPdfWriter {
     private const val PAGE_MARGIN = 24f
-    private const val MAX_IMAGE_SIDE = 1600
+
+    /** 2480 px = 300 dpi across A4, so the export never throws away scan detail. */
+    private const val MAX_IMAGE_SIDE = 2480
 
     /** Returns the number of pages written. Pages whose image can't be read are skipped. */
     fun write(

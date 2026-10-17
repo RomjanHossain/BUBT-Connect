@@ -59,8 +59,8 @@ class DocumentPipeline(private val context: Context) {
         /** Decodes are capped so a full-frame phone photo stays a sane size in memory. */
         private const val MAX_DECODE_SIDE = 3200
 
-        /** FairScan's "Balanced" export budget: ~2 MP pages (8 MP for B&W, which compresses to ~nothing). */
-        private const val MAX_PIXELS = 2_000_000L
+        /** FairScan's "High" export budget: ~4 MP pages (16 MP for B&W, which compresses to ~nothing). */
+        private const val MAX_PIXELS = 4_000_000L
         private const val JPEG_QUALITY = 90
     }
 
