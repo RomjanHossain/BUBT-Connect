@@ -26,6 +26,7 @@ import com.corethink.bubtconnect.data.scan.ScanPdfWriter
 import org.fairscan.imageprocessing.ColorMode
 import org.fairscan.imageprocessing.ImageSize
 import org.fairscan.imageprocessing.Mode
+import org.fairscan.imageprocessing.OpticalMeasures
 import org.fairscan.imageprocessing.Quad
 import org.fairscan.imageprocessing.detectDocumentQuad
 import java.io.File
@@ -214,9 +215,13 @@ class ScannerViewModel(application: Application) : AndroidViewModel(application)
     }
 
     /** Runs the scan pipeline on a CameraX capture and appends the straightened page. */
-    fun addCameraPage(sourceFile: File, onDone: (Boolean) -> Unit = {}) {
+    fun addCameraPage(
+        sourceFile: File,
+        opticalMeasures: OpticalMeasures? = null,
+        onDone: (Boolean) -> Unit = {}
+    ) {
         viewModelScope.launch {
-            val processed = ingest(listOf(sourceFile to processedCaptureFile(sourceFile)), Mode.CAPTURE)
+            val processed = ingest(listOf(sourceFile to processedCaptureFile(sourceFile)), Mode.CAPTURE, opticalMeasures)
             onDone(processed.isNotEmpty())
         }
     }
@@ -231,14 +236,18 @@ class ScannerViewModel(application: Application) : AndroidViewModel(application)
     }
 
     /** Persists each processed page; returns the pages that made it. */
-    private suspend fun ingest(sources: List<Pair<File, File>>, mode: Mode): List<ProcessedPage> {
+    private suspend fun ingest(
+        sources: List<Pair<File, File>>,
+        mode: Mode,
+        opticalMeasures: OpticalMeasures? = null
+    ): List<ProcessedPage> {
         if (sources.isEmpty()) return emptyList()
         resetLiveDetection()
         _uiState.update { it.copy(isProcessing = true) }
         // A capture must never be lost to a silent pipeline error: fall back to the
         // raw photo so Review always shows the page and the user can crop manually.
         val processed = sources.mapNotNull { (source, target) ->
-            runCatching { pipeline.process(source, target, mode) }
+            runCatching { pipeline.process(source, target, mode, opticalMeasures) }
                 .onFailure { Log.e("Scanner", "Page processing failed; keeping the raw photo", it) }
                 .getOrNull()
                 ?: runCatching { ProcessedPage(source, source, null, ColorMode.COLOR) }
@@ -253,7 +262,8 @@ class ScannerViewModel(application: Application) : AndroidViewModel(application)
                             id = nextPageId++,
                             uri = Uri.fromFile(page.file).toString(),
                             sourceUri = Uri.fromFile(page.sourceFile).toString(),
-                            quad = page.normalizedQuad
+                            quad = page.normalizedQuad,
+                            opticalMeasures = opticalMeasures
                         )
                     }
                 )
@@ -305,7 +315,7 @@ class ScannerViewModel(application: Application) : AndroidViewModel(application)
             _uiState.update { it.copy(processingPageId = pageId) }
             val processed = runCatching {
                 val base = File(scanDir, "pages/${pageId}_v${System.currentTimeMillis()}")
-                pipeline.reprocess(File(sourcePath), base, page.quad, page.colorMode)
+                pipeline.reprocess(File(sourcePath), base, page.quad, page.colorMode, page.opticalMeasures)
             }.onFailure {
                 Log.e("Scanner", "Page reprocessing failed", it)
             }.getOrNull()

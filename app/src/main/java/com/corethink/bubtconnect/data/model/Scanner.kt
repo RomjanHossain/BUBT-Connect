@@ -1,6 +1,7 @@
 package com.corethink.bubtconnect.data.model
 
 import org.fairscan.imageprocessing.ColorMode
+import org.fairscan.imageprocessing.OpticalMeasures
 import org.fairscan.imageprocessing.Quad
 
 /** Cover templates offered on 1m. [heading] is the big title printed on the cover. */
@@ -41,5 +42,7 @@ data class ScanPage(
     val grayscale: Boolean = false,
     val sourceUri: String? = null,
     val quad: Quad? = null,
-    val colorMode: ColorMode? = null
+    val colorMode: ColorMode? = null,
+    /** Real focal length + subject distance at capture, for aspect-true warps like FairScan. */
+    val opticalMeasures: OpticalMeasures? = null
 )

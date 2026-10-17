@@ -25,6 +25,7 @@ import kotlinx.coroutines.withContext
 import org.fairscan.imageprocessing.ColorMode
 import org.fairscan.imageprocessing.ImageSize
 import org.fairscan.imageprocessing.Mode
+import org.fairscan.imageprocessing.OpticalMeasures
 import org.fairscan.imageprocessing.Quad
 import org.fairscan.imageprocessing.autoColorMode
 import org.fairscan.imageprocessing.detectDocumentQuad
@@ -56,8 +57,8 @@ class DocumentPipeline(private val context: Context) {
     companion object {
         private const val TAG = "DocumentPipeline"
 
-        /** Decodes are capped so a full-frame phone photo stays a sane size in memory. */
-        private const val MAX_DECODE_SIDE = 3200
+        /** FairScan decodes captured photos at full sensor resolution; we only guard 50+ MP shots. */
+        private const val MAX_DECODE_SIDE = 6000
 
         /** FairScan's "High" export budget: ~4 MP pages (16 MP for B&W, which compresses to ~nothing). */
         private const val MAX_PIXELS = 4_000_000L
@@ -93,7 +94,12 @@ class DocumentPipeline(private val context: Context) {
      * Detects the page in [sourceFile] (honouring EXIF rotation), warps it flat,
      * enhances it with the auto-detected color mode and writes the result to [outFile].
      */
-    suspend fun process(sourceFile: File, outFile: File, mode: Mode): ProcessedPage =
+    suspend fun process(
+        sourceFile: File,
+        outFile: File,
+        mode: Mode,
+        opticalMeasures: OpticalMeasures? = null
+    ): ProcessedPage =
         withContext(Dispatchers.IO) {
             ensureReady()
             val bitmap = decodeUpright(sourceFile)
@@ -132,7 +138,7 @@ class DocumentPipeline(private val context: Context) {
                 colorMode = runCatching { autoColorMode(bgr, mask, quad) }
                     .onFailure { Log.e(TAG, "Auto color detection failed; using COLOR", it) }
                     .getOrDefault(ColorMode.COLOR)
-                runCatching { extractDocument(bgr, quad, 0, colorMode, MAX_PIXELS) }
+                runCatching { extractDocument(bgr, quad, 0, colorMode, MAX_PIXELS, opticalMeasures) }
                     .getOrElse {
                         Log.e(TAG, "Warp failed; keeping the full photo", it)
                         resizeForMaxPixels(bgr, MAX_PIXELS.toDouble())
@@ -156,7 +162,8 @@ class DocumentPipeline(private val context: Context) {
         sourceFile: File,
         outBase: File,
         quad: Quad?,
-        colorMode: ColorMode?
+        colorMode: ColorMode?,
+        opticalMeasures: OpticalMeasures? = null
     ): ProcessedPage = withContext(Dispatchers.IO) {
         ensureReady()
         val bitmap = decodeUpright(sourceFile)
@@ -175,7 +182,7 @@ class DocumentPipeline(private val context: Context) {
         val page = if (quadInImage == null) {
             enhanceCapturedImage(resizeForMaxPixels(bgr, MAX_PIXELS.toDouble()), resolvedMode, MAX_PIXELS)
         } else {
-            extractDocument(bgr, quadInImage, 0, resolvedMode, MAX_PIXELS)
+            extractDocument(bgr, quadInImage, 0, resolvedMode, MAX_PIXELS, opticalMeasures)
         }
         bgr.release()
 

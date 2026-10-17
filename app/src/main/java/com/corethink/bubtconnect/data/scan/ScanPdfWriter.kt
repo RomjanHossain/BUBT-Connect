@@ -35,19 +35,31 @@ object PageBitmaps {
         val uri = Uri.parse(uriString)
         val resolver = context.contentResolver
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        resolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) } ?: return null
-        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
+        val boundsStream = resolver.openInputStream(uri)
+        if (boundsStream == null) {
+            Log.e("PageBitmaps", "openInputStream returned null for $uriString")
+            return null
+        }
+        boundsStream.use { BitmapFactory.decodeStream(it, null, bounds) }
+        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) {
+            Log.e("PageBitmaps", "bounds probe failed (${bounds.outWidth}x${bounds.outHeight}) for $uriString")
+            return null
+        }
 
         var sample = 1
         while (max(bounds.outWidth, bounds.outHeight) / (sample * 2) >= maxSize) sample *= 2
         val decoded = resolver.openInputStream(uri)?.use {
             BitmapFactory.decodeStream(it, null, BitmapFactory.Options().apply { inSampleSize = sample })
-        } ?: return null
+        }
+        if (decoded == null) {
+            Log.e("PageBitmaps", "sample decode stream null for $uriString")
+            return null
+        }
 
         val exifRotation = resolver.openInputStream(uri)?.use { exifRotation(ExifInterface(it)) } ?: 0
         val rotated = rotate(decoded, (exifRotation + page.rotation) % 360)
         if (page.grayscale) grayscale(rotated) else rotated
-    }.getOrNull()
+    }.onFailure { Log.e("PageBitmaps", "decodeUri($uriString) threw", it) }.getOrNull()
 
     private fun exifRotation(exif: ExifInterface): Int =
         when (exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)) {

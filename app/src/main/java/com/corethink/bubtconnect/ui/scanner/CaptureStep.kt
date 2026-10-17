@@ -3,8 +3,15 @@ package com.corethink.bubtconnect.ui.scanner
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.hardware.camera2.CameraCaptureSession
+import android.hardware.camera2.CameraMetadata
+import android.hardware.camera2.CaptureRequest
+import android.hardware.camera2.CaptureResult
+import android.hardware.camera2.TotalCaptureResult
 import android.net.Uri
 import android.provider.Settings
+import android.util.Log
+import android.util.Size
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -17,6 +24,10 @@ import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
 import androidx.camera.core.resolutionselector.AspectRatioStrategy
 import androidx.camera.core.resolutionselector.ResolutionSelector
+import androidx.camera.core.resolutionselector.ResolutionStrategy
+import androidx.camera.camera2.interop.Camera2CameraInfo
+import androidx.camera.camera2.interop.Camera2Interop
+import androidx.camera.camera2.interop.ExperimentalCamera2Interop
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.BorderStroke
@@ -83,6 +94,10 @@ import com.corethink.bubtconnect.data.scan.lerpQuad
 import com.corethink.bubtconnect.ui.components.BubtSegmentedControl
 import com.corethink.bubtconnect.ui.design.BubtPrimaryButton
 import com.corethink.bubtconnect.ui.design.BubtShapes
+import org.fairscan.imageprocessing.CameraIntrinsics
+import org.fairscan.imageprocessing.OpticalMeasures
+import org.fairscan.imageprocessing.cameraIntrinsics
+import kotlin.math.max
 import com.corethink.bubtconnect.ui.design.BubtSpacing
 import org.fairscan.imageprocessing.Point
 import java.io.File
@@ -105,7 +120,7 @@ fun CaptureStep(
     state: ScannerUiState,
     onClose: () -> Unit,
     newCaptureFile: () -> File,
-    onCameraPageCaptured: (File, (Boolean) -> Unit) -> Unit,
+    onCameraPageCaptured: (File, OpticalMeasures?, (Boolean) -> Unit) -> Unit,
     onPagesAdded: (List<Uri>) -> Unit,
     onReview: () -> Unit,
     liveDetection: ScanDetection?,
@@ -136,8 +151,40 @@ fun CaptureStep(
     // Picks up a permission granted from system Settings.
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { hasPermission = context.hasCameraPermission() }
 
+    val optics = remember { CaptureOptics() }
+
+    @OptIn(ExperimentalCamera2Interop::class)
     val imageCapture = remember {
-        ImageCapture.Builder().setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY).build()
+        ImageCapture.Builder()
+            // FairScan parity: shoot at the sensor's 4:3 maximum so pages keep full detail.
+            .setResolutionSelector(
+                ResolutionSelector.Builder()
+                    .setResolutionStrategy(
+                        ResolutionStrategy(
+                            Size(4400, 3300),
+                            ResolutionStrategy.FALLBACK_RULE_CLOSEST_LOWER_THEN_HIGHER
+                        )
+                    )
+                    .setAspectRatioStrategy(AspectRatioStrategy.RATIO_4_3_FALLBACK_AUTO_STRATEGY)
+                    .build()
+            )
+            .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
+            .also { builder ->
+                Camera2Interop.Extender(builder).setSessionCaptureCallback(
+                    object : CameraCaptureSession.CaptureCallback() {
+                        override fun onCaptureCompleted(
+                            session: CameraCaptureSession,
+                            request: CaptureRequest,
+                            result: TotalCaptureResult
+                        ) {
+                            result.get(CaptureResult.LENS_FOCUS_DISTANCE)?.let {
+                                optics.lastFocusDistanceDiopters = it
+                            }
+                        }
+                    }
+                )
+            }
+            .build()
     }
     LaunchedEffect(flashOn) {
         imageCapture.flashMode = if (flashOn) ImageCapture.FLASH_MODE_ON else ImageCapture.FLASH_MODE_OFF
@@ -155,7 +202,7 @@ fun CaptureStep(
                 override fun onImageSaved(output: ImageCapture.OutputFileResults) {
                     // Detect, straighten and enhance before the page joins the stack.
                     processing = true
-                    onCameraPageCaptured(file) { ok ->
+                    onCameraPageCaptured(file, optics.measures()) { ok ->
                         capturing = false
                         processing = false
                         if (!ok) {
@@ -234,6 +281,7 @@ fun CaptureStep(
                 else -> {
                     CameraPreview(
                         imageCapture = imageCapture,
+                        optics = optics,
                         onFrameAnalyzed = onFrameAnalyzed,
                         modifier = Modifier.fillMaxSize()
                     )
@@ -291,12 +339,57 @@ fun CaptureStep(
 }
 
 /**
+ * Lens metadata FairScan feeds into the page warp: with the real focal length and the
+ * focus distance at shutter time, warped pages come out aspect-true instead of slightly
+ * trapezoid. Mirrors FairScan's CameraCaptureController.
+ */
+class CaptureOptics {
+    @Volatile
+    var intrinsics: CameraIntrinsics? = null
+
+    @Volatile
+    var lastFocusDistanceDiopters: Float? = null
+    var canUseFocusDistance = false
+
+    fun setCameraCharacteristics(cameraInfo: Camera2CameraInfo) {
+        val focalLengths = cameraInfo.getCameraCharacteristic(
+            android.hardware.camera2.CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS
+        )
+        val sensorSize = cameraInfo.getCameraCharacteristic(
+            android.hardware.camera2.CameraCharacteristics.SENSOR_INFO_PHYSICAL_SIZE
+        )
+        intrinsics = if (focalLengths == null || focalLengths.size != 1 || sensorSize == null) {
+            null
+        } else {
+            cameraIntrinsics(focalLengths[0], max(sensorSize.width, sensorSize.height))
+        }
+        val calibration = cameraInfo.getCameraCharacteristic(
+            android.hardware.camera2.CameraCharacteristics.LENS_INFO_FOCUS_DISTANCE_CALIBRATION
+        )
+        canUseFocusDistance = calibration == CameraMetadata.LENS_INFO_FOCUS_DISTANCE_CALIBRATION_CALIBRATED ||
+            calibration == CameraMetadata.LENS_INFO_FOCUS_DISTANCE_CALIBRATION_APPROXIMATE
+    }
+
+    fun measures(): OpticalMeasures? {
+        val intrinsics = intrinsics ?: return null
+        val diopters = lastFocusDistanceDiopters
+        val subjectDistanceInMm = if (canUseFocusDistance && diopters != null && diopters != 0.0f) {
+            1000 / diopters
+        } else {
+            null
+        }
+        return OpticalMeasures(intrinsics, subjectDistanceInMm)
+    }
+}
+
+/**
  * Binds a back-camera preview + [imageCapture] + [ImageAnalysis] to the current lifecycle.
  * Analysis frames go to [onFrameAnalyzed] (live document detection) on a single-thread executor.
  */
 @Composable
 private fun CameraPreview(
     imageCapture: ImageCapture,
+    optics: CaptureOptics,
     onFrameAnalyzed: (ImageProxy) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -330,13 +423,16 @@ private fun CameraPreview(
                 val cameraProvider = future.get().also { provider = it }
                 val preview = Preview.Builder().build().also { it.setSurfaceProvider(previewView.surfaceProvider) }
                 cameraProvider.unbindAll()
-                cameraProvider.bindToLifecycle(
+                val camera = cameraProvider.bindToLifecycle(
                     lifecycleOwner,
                     CameraSelector.DEFAULT_BACK_CAMERA,
                     preview,
                     imageAnalysis,
                     imageCapture
                 )
+                runCatching {
+                    optics.setCameraCharacteristics(Camera2CameraInfo.from(camera.cameraInfo))
+                }.onFailure { Log.w("CaptureStep", "Lens metadata unavailable for warp math", it) }
             }.onFailure { unavailable = true }
         }, ContextCompat.getMainExecutor(context))
         onDispose {
