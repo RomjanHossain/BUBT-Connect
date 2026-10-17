@@ -154,7 +154,7 @@ fun ReviewStep(
                     enabled = selected != null && !editing,
                     onClick = { showFilter = !showFilter }
                 )
-                ToolButton(Icons.Outlined.Delete, "Delete", enabled = selected != null && !editing, onClick = onDelete)
+                ToolButton(Icons.Outlined.Delete, "Delete", enabled = selected != null && !editing, danger = true, onClick = onDelete)
             }
         }
         if (showFilter && selected != null) {
@@ -424,9 +424,15 @@ private fun ToolButton(
     icon: ImageVector,
     label: String,
     enabled: Boolean,
+    danger: Boolean = false,
     onClick: () -> Unit
 ) {
-    val content = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+    // Design 1r: Delete is styled with the error color, muted when disabled.
+    val content = when {
+        !enabled -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+        danger -> MaterialTheme.colorScheme.error
+        else -> MaterialTheme.colorScheme.onSurface
+    }
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
