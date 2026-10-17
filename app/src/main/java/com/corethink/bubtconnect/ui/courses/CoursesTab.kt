@@ -46,6 +46,7 @@ import com.corethink.bubtconnect.data.model.CourseStatus
 import com.corethink.bubtconnect.data.model.CurriculumCourse
 import com.corethink.bubtconnect.data.repository.SampleAcademicsRepository
 import com.corethink.bubtconnect.ui.components.FilterPill
+import com.corethink.bubtconnect.ui.components.Shim
 import com.corethink.bubtconnect.ui.components.formatCredits
 import com.corethink.bubtconnect.ui.design.BUBTConnectMaterial3Theme
 import com.corethink.bubtconnect.ui.design.BubtOnSuccessContainerLight
@@ -66,7 +67,7 @@ fun CoursesTab(viewModel: CoursesViewModel = viewModel()) {
     )
 }
 
-/** 1m · All courses. Matches HTML 1m exactly. */
+/** 1m · All courses. Matches HTML 1m exactly; 1n skeleton while the curriculum loads. */
 @Composable
 fun CoursesContent(
     state: CoursesUiState,
@@ -79,28 +80,14 @@ fun CoursesContent(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         item {
-            OutlinedTextField(
-                value = state.query,
-                onValueChange = onQueryChange,
-                modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("Search code or title", style = MaterialTheme.typography.bodyMedium) },
-                leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null) },
-                trailingIcon = if (state.query.isNotEmpty()) {
-                    {
-                        IconButton(onClick = { onQueryChange("") }) {
-                            Icon(Icons.Filled.Close, contentDescription = "Clear search")
-                        }
-                    }
-                } else null,
-                singleLine = true,
-                shape = RoundedCornerShape(26.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                    focusedContainerColor = MaterialTheme.colorScheme.surface
-                )
-            )
+            SearchField(state = state, onQueryChange = onQueryChange)
+        }
+        if (state.isLoading) {
+            // 1n · shimmer skeleton, mirroring the loaded layout so nothing jumps on arrival.
+            item { FilterPillsSkeleton() }
+            item { ProgressSkeleton() }
+            items(5) { index -> CourseCardSkeleton(index) }
+            return@LazyColumn
         }
         item {
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -243,6 +230,101 @@ private fun NumberTile(number: String, status: CourseStatus) {
             color = content,
             fontSize = 11.sp
         )
+    }
+}
+
+/** Search field shared by the loaded 1m layout and the 1n skeleton (search stays usable). */
+@Composable
+private fun SearchField(state: CoursesUiState, onQueryChange: (String) -> Unit) {
+    OutlinedTextField(
+        value = state.query,
+        onValueChange = onQueryChange,
+        modifier = Modifier.fillMaxWidth(),
+        placeholder = { Text("Search code or title", style = MaterialTheme.typography.bodyMedium) },
+        leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null) },
+        trailingIcon = if (state.query.isNotEmpty()) {
+            {
+                IconButton(onClick = { onQueryChange("") }) {
+                    Icon(Icons.Filled.Close, contentDescription = "Clear search")
+                }
+            }
+        } else null,
+        singleLine = true,
+        shape = RoundedCornerShape(26.dp),
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = MaterialTheme.colorScheme.primary,
+            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+            focusedContainerColor = MaterialTheme.colorScheme.surface
+        )
+    )
+}
+
+/** 1n · Filter pills shimmer while the curriculum loads. */
+@Composable
+private fun FilterPillsSkeleton() {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        listOf(64.dp, 100.dp, 96.dp).forEach { width ->
+            Shim(modifier = Modifier.width(width).height(34.dp), radius = 17.dp)
+        }
+    }
+}
+
+/** 1n · Progress heading + track placeholders. */
+@Composable
+private fun ProgressSkeleton() {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Shim(
+            modifier = Modifier
+                .fillMaxWidth(0.6f)
+                .height(14.dp)
+        )
+        Shim(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(6.dp),
+            radius = 3.dp
+        )
+    }
+}
+
+/** 1n · Course card placeholders; widths follow the design's 5 skeleton rows. */
+@Composable
+private fun CourseCardSkeleton(index: Int) {
+    val titleWidths = listOf(0.70f, 0.55f, 0.75f, 0.60f, 0.65f)
+    val metaWidths = listOf(0.45f, 0.40f, 0.45f, 0.35f, 0.45f)
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+        shadowElevation = 1.dp
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Shim(
+                modifier = Modifier.size(40.dp),
+                radius = 12.dp
+            )
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Shim(
+                    modifier = Modifier
+                        .fillMaxWidth(titleWidths[index])
+                        .height(14.dp)
+                )
+                Shim(
+                    modifier = Modifier
+                        .fillMaxWidth(metaWidths[index])
+                        .height(10.dp)
+                )
+            }
+        }
     }
 }
 
