@@ -1,5 +1,14 @@
 package com.corethink.bubtconnect.navigation
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -45,6 +54,7 @@ import com.corethink.bubtconnect.ui.community.CommunityRoute
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination.Companion.hierarchy
@@ -54,6 +64,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.corethink.bubtconnect.ui.components.bounceClick
+import com.corethink.bubtconnect.ui.components.pressScale
 import com.corethink.bubtconnect.ui.design.BubtShapes
 import com.corethink.bubtconnect.ui.design.BubtSpacing
 import com.corethink.bubtconnect.ui.home.HomeRoute
@@ -99,6 +111,8 @@ fun MainScaffold(
         }
     }
 
+    fun ordinalOf(route: String?): Int = MainTab.entries.indexOfFirst { it.route == route }.takeIf { it >= 0 } ?: 0
+
     fun openAcademics(tab: AcademicsTab) {
         academicsTab = tab
         selectTab(MainTab.Academics)
@@ -119,7 +133,22 @@ fun MainScaffold(
         NavHost(
             navController = tabNavController,
             startDestination = MainTab.Home.route,
-            modifier = Modifier.padding(innerPadding)
+            modifier = Modifier.padding(innerPadding),
+            enterTransition = {
+                // Tabs slide in the direction you're heading (Home ⇄ Profile), softly.
+                val forward = ordinalOf(targetState.destination.route) > ordinalOf(initialState.destination.route)
+                slideInHorizontally(
+                    animationSpec = tween(320, easing = FastOutSlowInEasing)
+                ) { d -> if (forward) d / 5 else -d / 5 } + fadeIn(tween(180))
+            },
+            exitTransition = { fadeOut(tween(100)) },
+            popEnterTransition = { fadeIn(tween(180)) },
+            popExitTransition = {
+                val forward = ordinalOf(targetState.destination.route) > ordinalOf(initialState.destination.route)
+                fadeOut(tween(100)) + slideOutHorizontally(
+                    animationSpec = tween(240, easing = FastOutSlowInEasing)
+                ) { d -> if (forward) -d / 7 else d / 7 }
+            }
         ) {
             composable(MainTab.Home.route) {
                 HomeRoute(
@@ -214,7 +243,11 @@ private fun NavTabItem(
     val interactionSource = remember { MutableInteractionSource() }
     Column(
         modifier = modifier
-            .clickable(interactionSource = interactionSource, indication = null) { onSelect(tab) }
+            .bounceClick(
+                onClickLabel = tab.label,
+                pressedScale = 0.88f,
+                onClick = { onSelect(tab) }
+            )
             .padding(vertical = BubtSpacing.Sm),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -228,11 +261,22 @@ private fun NavTabItem(
                 ),
             contentAlignment = Alignment.Center
         ) {
+            // Selected icons pop with a spring overshoot.
+            val iconScale by animateFloatAsState(
+                targetValue = if (selected) 1.12f else 1f,
+                animationSpec = spring(dampingRatio = 0.42f, stiffness = 480f),
+                label = "navIconPop"
+            )
             Icon(
                 imageVector = if (selected) tab.selectedIcon else tab.unselectedIcon,
                 contentDescription = tab.label,
                 tint = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(NavIconSize)
+                modifier = Modifier
+                    .size(NavIconSize)
+                    .graphicsLayer {
+                        scaleX = iconScale
+                        scaleY = iconScale
+                    }
             )
         }
         Spacer(modifier = Modifier.height(2.dp))
@@ -251,12 +295,15 @@ private fun ScanDock(onScan: () -> Unit) {
         modifier = Modifier.width(72.dp),
         contentAlignment = Alignment.Center
     ) {
+        val source = remember { MutableInteractionSource() }
         Surface(
             onClick = onScan,
+            interactionSource = source,
             shape = CircleShape,
             color = MaterialTheme.colorScheme.primary,
             contentColor = MaterialTheme.colorScheme.onPrimary,
             modifier = Modifier
+                .pressScale(source, pressedScale = 0.9f, dampingRatio = 0.5f, stiffness = Spring.StiffnessMediumLow)
                 .size(ScanFabSize)
                 .shadow(
                     elevation = 6.dp,

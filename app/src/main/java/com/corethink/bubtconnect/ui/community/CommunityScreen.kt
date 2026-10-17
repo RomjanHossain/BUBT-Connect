@@ -16,7 +16,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
@@ -49,6 +51,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
@@ -66,6 +69,9 @@ import com.corethink.bubtconnect.ui.components.EmptyState
 import com.corethink.bubtconnect.ui.components.FilterPill
 import com.corethink.bubtconnect.ui.components.formatCompactCount
 import com.corethink.bubtconnect.ui.components.formatDaysAgo
+import com.corethink.bubtconnect.ui.components.pressScale
+import com.corethink.bubtconnect.ui.components.rememberPopScale
+import com.corethink.bubtconnect.ui.components.riseIn
 import com.corethink.bubtconnect.ui.components.showNotAvailableYet
 import com.corethink.bubtconnect.ui.design.BUBTConnectMaterial3Theme
 import com.corethink.bubtconnect.ui.design.BubtCategoryTile
@@ -198,9 +204,14 @@ fun CommunityScreen(
                     )
                 }
             }
-            items(state.posts, key = { it.post.id }) { item ->
+            itemsIndexed(
+                state.posts,
+                key = { _, item -> item.post.id }
+            ) { index, item ->
                 CommunityPostCard(
                     item = item,
+                    // Feed cards rise in with a small stagger (capped for long lists).
+                    modifier = Modifier.riseIn(index = minOf(index, 6)),
                     onOpen = { onOpenPost(item) },
                     onToggleLike = { onToggleLike(item) },
                     onDownload = { onDownload(item) }
@@ -257,12 +268,17 @@ private fun CommunityPostCard(
     item: CommunityPostItem,
     onOpen: () -> Unit,
     onToggleLike: () -> Unit,
-    onDownload: () -> Unit
+    onDownload: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val post = item.post
+    val cardSource = remember { MutableInteractionSource() }
     Surface(
         onClick = onOpen,
-        modifier = Modifier.fillMaxWidth(),
+        interactionSource = cardSource,
+        modifier = modifier
+            .fillMaxWidth()
+            .pressScale(cardSource, pressedScale = 0.97f, dampingRatio = 0.7f),
         shape = BubtShapes.Card,
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
@@ -326,11 +342,18 @@ private fun CommunityPostCard(
                     modifier = Modifier.weight(1f)
                 )
                 IconButton(onClick = onToggleLike, modifier = Modifier.size(ActionHeight)) {
+                    // Heart springs with overshoot on every like toggle.
+                    val heartScale = rememberPopScale(item.liked)
                     Icon(
                         imageVector = Icons.Filled.Favorite,
                         contentDescription = if (item.liked) "Unlike" else "Like",
                         tint = if (item.liked) BubtError else MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier
+                            .size(20.dp)
+                            .graphicsLayer {
+                                scaleX = heartScale
+                                scaleY = heartScale
+                            }
                     )
                 }
                 Text(

@@ -1,5 +1,11 @@
 package com.corethink.bubtconnect.navigation
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -34,7 +40,23 @@ object Routes {
 
 @Composable
 fun AppNavGraph(navController: NavHostController = rememberNavController()) {
-    NavHost(navController = navController, startDestination = Routes.WELCOME) {
+    NavHost(
+        navController = navController,
+        startDestination = Routes.WELCOME,
+        // Full-screen pushes arrive like sheets: rise from the bottom edge, fade back down.
+        enterTransition = {
+            slideInVertically(
+                animationSpec = tween(360, easing = FastOutSlowInEasing)
+            ) { it / 6 } + fadeIn(tween(200))
+        },
+        exitTransition = { fadeOut(tween(100)) },
+        popEnterTransition = { fadeIn(tween(200)) },
+        popExitTransition = {
+            fadeOut(tween(120)) + slideOutVertically(
+                animationSpec = tween(280, easing = FastOutSlowInEasing)
+            ) { it / 6 }
+        }
+    ) {
         composable(Routes.WELCOME) {
             WelcomeScreen(
                 onGetStarted = { navController.navigate(Routes.PROFILE_SETUP) },

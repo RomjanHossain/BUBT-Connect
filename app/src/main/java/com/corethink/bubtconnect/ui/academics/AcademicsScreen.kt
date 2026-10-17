@@ -1,5 +1,13 @@
 package com.corethink.bubtconnect.ui.academics
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -85,16 +93,32 @@ fun AcademicsScreen(
                 )
             }
         }
-        when (selectedTab) {
-            AcademicsTab.Routine -> RoutineTab()
-            AcademicsTab.Exams -> ExamsTab()
-            AcademicsTab.Results -> ResultsTab()
-            AcademicsTab.Attendance -> AttendanceTab()
-            AcademicsTab.Calendar -> CalendarTab(
-                onSeeExamRoutine = { onSelectTab(AcademicsTab.Exams) },
-                onOpenFees = onOpenFees
-            )
-            AcademicsTab.Courses -> CoursesTab()
+        // Cross-slide in the direction of the pick so tab hops feel physical.
+        AnimatedContent(
+            targetState = selectedTab,
+            transitionSpec = {
+                val forward = targetState.ordinal > initialState.ordinal
+                val enter = slideInHorizontally(
+                    animationSpec = tween(320, easing = FastOutSlowInEasing)
+                ) { d -> if (forward) d / 5 else -d / 5 } + fadeIn(tween(160))
+                val exit = fadeOut(tween(100)) + slideOutHorizontally(
+                    animationSpec = tween(240, easing = FastOutSlowInEasing)
+                ) { d -> if (forward) -d / 8 else d / 8 }
+                enter togetherWith exit
+            },
+            label = "academicsTabContent"
+        ) { tab ->
+            when (tab) {
+                AcademicsTab.Routine -> RoutineTab()
+                AcademicsTab.Exams -> ExamsTab()
+                AcademicsTab.Results -> ResultsTab()
+                AcademicsTab.Attendance -> AttendanceTab()
+                AcademicsTab.Calendar -> CalendarTab(
+                    onSeeExamRoutine = { onSelectTab(AcademicsTab.Exams) },
+                    onOpenFees = onOpenFees
+                )
+                AcademicsTab.Courses -> CoursesTab()
+            }
         }
     }
 }
