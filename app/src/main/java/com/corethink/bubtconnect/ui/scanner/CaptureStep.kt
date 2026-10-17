@@ -326,10 +326,11 @@ fun CaptureStep(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            LastShotButton(page = state.pages.lastOrNull(), onClick = pickFromGallery)
+            GalleryIconButton(onClick = pickFromGallery)
             ShutterButton(enabled = cameraReady && !capturing && !processing, onClick = ::capture)
             PageStackButton(
                 count = state.pages.size,
+                lastPage = state.pages.lastOrNull(),
                 enabled = state.pages.isNotEmpty() || state.template.hasCover,
                 onClick = onReview
             )
@@ -573,7 +574,7 @@ private fun DarkIconButton(
 }
 
 @Composable
-private fun LastShotButton(page: ScanPage?, onClick: () -> Unit) {
+private fun GalleryIconButton(onClick: () -> Unit) {
     Box(
         modifier = Modifier
             .size(56.dp)
@@ -583,11 +584,7 @@ private fun LastShotButton(page: ScanPage?, onClick: () -> Unit) {
             .clickable(onClickLabel = "Import from gallery", onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        if (page != null) {
-            PageThumbnail(page = page, maxSize = 160, modifier = Modifier.fillMaxSize())
-        } else {
-            Icon(Icons.Outlined.PhotoLibrary, contentDescription = "Import from gallery", tint = CaptureContent)
-        }
+        Icon(Icons.Outlined.PhotoLibrary, contentDescription = "Import from gallery", tint = CaptureContent)
     }
 }
 
@@ -613,24 +610,51 @@ private fun ShutterButton(enabled: Boolean, onClick: () -> Unit) {
 }
 
 @Composable
-private fun PageStackButton(count: Int, enabled: Boolean, onClick: () -> Unit) {
-    Surface(
-        onClick = onClick,
-        enabled = enabled,
-        shape = BubtShapes.Field,
-        color = Color.Transparent,
-        contentColor = if (enabled) CaptureContent else CaptureMuted.copy(alpha = 0.5f),
-        border = BorderStroke(1.5.dp, CaptureMuted),
+private fun PageStackButton(count: Int, lastPage: ScanPage?, enabled: Boolean, onClick: () -> Unit) {
+    Box(
         modifier = Modifier
-            .height(56.dp)
+            .size(56.dp)
+            .clip(BubtShapes.Field)
+            .background(CaptureSurface)
+            .border(1.5.dp, CaptureMuted, BubtShapes.Field)
+            .clickable(enabled = enabled, onClickLabel = "Review $count pages", onClick = onClick)
             .semantics { contentDescription = "Review $count pages" }
     ) {
-        Row(
-            modifier = Modifier.padding(start = BubtSpacing.Md, end = BubtSpacing.Sm),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(text = "$count pg", style = MaterialTheme.typography.labelLarge)
-            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, modifier = Modifier.size(20.dp))
+        if (lastPage != null) {
+            PageThumbnail(page = lastPage, maxSize = 160, modifier = Modifier.fillMaxSize())
+            // Live capture count on top of the newest page, like a photo stack.
+            Surface(
+                shape = CircleShape,
+                color = CaptureSurface.copy(alpha = 0.92f),
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(4.dp)
+            ) {
+                Text(
+                    text = count.toString(),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = CaptureContent,
+                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                )
+            }
+        } else {
+            // Cover-only templates can open Review before any capture.
+            Row(
+                modifier = Modifier.padding(horizontal = BubtSpacing.Md),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "$count pg",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = if (enabled) CaptureContent else CaptureMuted.copy(alpha = 0.5f)
+                )
+                Icon(
+                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = if (enabled) CaptureContent else CaptureMuted.copy(alpha = 0.5f),
+                    modifier = Modifier.size(20.dp)
+                )
+            }
         }
     }
 }
