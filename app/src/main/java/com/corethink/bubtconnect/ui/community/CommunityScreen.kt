@@ -80,7 +80,10 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 
 @Composable
-fun CommunityRoute(viewModel: CommunityViewModel = viewModel()) {
+fun CommunityRoute(
+    onShareNotes: () -> Unit = {},
+    viewModel: CommunityViewModel = viewModel()
+) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     CommunityScreen(
@@ -90,7 +93,8 @@ fun CommunityRoute(viewModel: CommunityViewModel = viewModel()) {
         onOpenPost = { showNotAvailableYet(context, "PDF preview") },
         onToggleLike = { viewModel.toggleLike(it.post.id) },
         onDownload = { showNotAvailableYet(context, "Offline downloads") },
-        onShare = { showNotAvailableYet(context, "Share your notes") },
+        // 1x · "Share your notes" opens the scanner at Step 1 with publish pre-enabled.
+        onShare = onShareNotes,
         onOpenBookmarks = { showNotAvailableYet(context, "Bookmarks") }
     )
 }

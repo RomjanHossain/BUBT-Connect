@@ -150,7 +150,7 @@ fun MainScaffold(
                     onOpenFees = onOpenFees
                 )
             }
-            composable(MainTab.Community.route) { CommunityRoute() }
+            composable(MainTab.Community.route) { CommunityRoute(onShareNotes = onOpenScanner) }
             composable(MainTab.Profile.route) {
                 ProfileRoute(
                     onEditProfile = onEditProfile,
